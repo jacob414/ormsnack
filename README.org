@@ -1,1 +1,7 @@
 * Python AST generation / manipulation toolkit
+
+#+BEGIN_SRC python
+>>> import ormsnack
+>>>
+#+END_SRC
+
