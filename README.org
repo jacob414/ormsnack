@@ -1,7 +1,14 @@
 * Python AST generation / manipulation toolkit
 
 #+BEGIN_SRC python
->>> import ormsnack
+>>> import ormsnack.tree
+>>> \
+... def foo(x: int) -> int:
+...     return x + 23
+>>> before_result = foo(234)
+>>> before_foo_ast = ormsnack.tree.getast(foo)
+>>> recomp = ormsnack.tree.compile_ast(before_foo_ast, foo.__name__)
+>>> ormsnack.tree.exec_sym(recomp, foo.__name__)(234)
+257
 >>>
 #+END_SRC
-

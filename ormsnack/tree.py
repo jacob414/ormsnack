@@ -2,7 +2,9 @@
 
 import ast
 import inspect
-from typing import Any
+from typing import Any, Mapping
+import types
+
 
 def getast(obj: Any, name: str = None) -> Any:
     """Grab AST of `obj`. (Uses inspect.getsource() behind the scenes).
@@ -14,4 +16,26 @@ def getast(obj: Any, name: str = None) -> Any:
     if name is None:
         name = obj.__name__
     body = ast.parse(inspect.getsource(obj)).body
-    return next(node for node in body if node.name == name)
+    return ast.Module(body=[next(node for node in body if node.name == name)])
+
+
+def compile_ast(tree_: types.CodeType, filename: str = None) -> types.CodeType:
+    "Compiles `tree_`, returning recompiled ast (if `compile()` succeeds"
+    if filename is None:
+        print('<ormsnack.tree.eval_ast:?>')
+    return compile(tree_, filename, 'exec')
+
+
+def exec_all(recompiled: types.CodeType) -> Mapping[str, Any]:
+    # type: () -> None
+    "Does exec"
+    ns = {}
+    exec(recompiled, globals(), ns)
+    return ns
+
+
+def exec_sym(recompiled: types.CodeType, symname: str) -> Any:
+    # type: () -> None
+    "Does exec_sym"
+    full = exec_all(recompiled)
+    return full[symname]
