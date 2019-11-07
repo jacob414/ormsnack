@@ -22,6 +22,14 @@ class Node(object):
         self.value = f'VALUE? {full}'
         self.full = full
         self.desc = full.__class__.__name__
+        try:
+            self.ident = full.name
+        except AttributeError:
+            self.ident = full.__class__.__name__
+
+    @property
+    def spec(self):
+        return f'{self.desc}:{self.ident}'
 
     def rebuild(self) -> _ast.AST:
         "Recreates tree."
@@ -57,6 +65,9 @@ class Block(Node, Branch):
         super().__init__(full)
         self.cond_raw = cond
         self.cond = self.value = simpany(cond)
+
+    def __str__(self):
+        return f'<Block {self.spec}>'
 
 
 class Sym(Node, Leaf):
