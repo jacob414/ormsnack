@@ -12,14 +12,19 @@ from patterns import patterns, Mismatch
 class Branch(object):
     "Marker for branching nodes"
 
+    @property
+    def children(self):
+        return [node for node in self.value]
+
 
 class Leaf(object):
     "Marker for leaf nodes"
 
 
 class Node(object):
-    def __init__(self, full):
+    def __init__(self, full, head, body):
         self.value = f'VALUE? {full}'
+        self.head = None
         self.full = full
         self.desc = full.__class__.__name__
         try:
@@ -30,6 +35,13 @@ class Node(object):
     @property
     def spec(self):
         return f'{self.desc}:{self.ident}'
+
+    @property
+    def deepval(self):
+        res = False
+
+    def __str__(self):
+        return f'<{self.__class__.__name__} {self.spec}>'
 
     def rebuild(self) -> _ast.AST:
         "Recreates tree."
@@ -61,48 +73,54 @@ def simpany(node_or_many: NodeOrIter) -> NodeOrIter:
 
 
 class Block(Node, Branch):
-    def __init__(self, cond, full):
-        super().__init__(full)
-        self.cond_raw = cond
-        self.cond = self.value = simpany(cond)
+    def __init__(self, full, head, body):
+        super().__init__(full, head, body)
+        self.cond_raw = head
+        # if self.ident == 'foo':
+        #     import ipdb
+        #     ipdb.set_trace()
+        #     pass
 
-    def __str__(self):
-        return f'<Block {self.spec}>'
+        if head is not None:
+            self.head = simplify(head)
+
+        self.cnt = self.value = simpany(body)
 
 
 class Sym(Node, Leaf):
-    def __init__(self, name, full):
-        super().__init__(full)
-        self.name = self.value = name
+    def __init__(self, full, head, body):
+        super().__init__(full, head, body)
+        self.desc = self.name = self.value = body
 
 
 class Expr(Node, Leaf):
-    def __init__(self, elements, full):
-        super().__init__(full)
-        self.elements = self.value = simpany(elements)
+    def __init__(self, full, head, body):
+        super().__init__(full, head, body)
+        self.elements = self.value = simpany(body)
 
 
 class Const(Node, Leaf):
-    def __init__(self, value, full):
-        super().__init__(full)
-        self.value = value
+    def __init__(self, full, head, body):
+        super().__init__(full, head, body)
+        self.value = body
 
 
 class Skip(Node):
-    def __init__(self, value, full):
-        pass
+    pass
 
 
 @patterns
 def simplificator():
-    if n is _ast.Return: lambda retrn: (Block, retrn.value)
-    if n is _ast.BinOp: lambda binop: (Expr, (binop.left, binop.right))
-    if n is _ast.Name: lambda name: (Sym, name.id)
-    if n is _ast.Str: lambda str_: (Const, str_.s)
-    if n is _ast.Num: lambda num: (Const, num.n)
-    if n is _ast.Module: lambda mod: (Skip, 0)
-    if n is _ast.FunctionDef: lambda fnd: (Block, fnd.body)
-    if n is _ast.Expr: lambda exp: (Expr, exp.value)
+    if n is _ast.Return: lambda retrn: (Block, None, retrn.value)
+    if n is _ast.BinOp: lambda binop: (Expr, None, (binop.left, binop.right))
+    if n is _ast.Name: lambda name: (Sym, None, name.id)
+    if n is _ast.Str: lambda str_: (Const, None, str_.s)
+    if n is _ast.Num: lambda num: (Const, None, num.n)
+    if n is _ast.Module: lambda mod: (Skip, 0, 0)
+    if n is _ast.FunctionDef: lambda fnd: (Block, fnd.args, fnd.body)
+    if n is _ast.Expr: lambda exp: (Expr, None, exp.value)
+    if n is _ast.arguments: lambda args: (Expr, None, args.args)
+    if n is _ast.arg: lambda arg: (Sym, None, arg.arg)
 
 
 def categ(node: _ast.AST) -> Tuple[Node, Tuple]:
@@ -117,10 +135,10 @@ def categ(node: _ast.AST) -> Tuple[Node, Tuple]:
         raise
 
 
-def simplify(node: _ast.AST) -> Iterable[Node]:
+def simplify(node: _ast.AST) -> Node:
     "Does simplify"
-    Kind, body = categ(node)
-    return Kind(body, node)
+    Kind, head, body = categ(node)
+    return Kind(node, head, body)
 
 
 childhand = {
