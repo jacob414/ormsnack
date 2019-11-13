@@ -125,19 +125,12 @@ def simplificator():
 
 def categ(node: _ast.AST) -> Tuple[Node, Tuple]:
     "Does unpack"
-    try:
-        return simplificator(node)(node)
-    except Mismatch:
-        print(f'No match: {node}')
-        import ipdb
-        ipdb.set_trace()
-        pass
-        raise
+    return simplificator(node)(node)
 
 
 def simplify(node: _ast.AST) -> Node:
     "Does simplify"
-    Kind, head, body = categ(node)
+    Kind, head, body = simplificator(node)(node)
     return Kind(node, head, body)
 
 
@@ -155,37 +148,15 @@ def unpack(node: _ast.AST) -> None:
     return childhand[type(children(node))](node)
 
 
-# Pattern match by exception concept....
-# for n in (
-#         n for n in dir(_ast)
-#         if n != 'AST' and not n.startswith('PyCF') and not n.startswith('__')):
-#     excname = f'{n}Exc'
-#     print(excname)
-#     Exc = lang.mkclass(excname, (Exception, ))
-#     locals()[n] = Exc
-
-
 def children(node: _ast.AST) -> Iterable:
     "Does child"
-    print(f'children of {node}..')
-
     typ = type(node)
     if typ is list:
         return node
 
-    try:
-        handler = childhand[typ]
-        ret = handler(node)
-        print(f'child extractor {type(node)} says {ret}')
-        return ret
-    except KeyError as exc:
-        print(f'Missmatch on {type(node)}')
-        try:
-            return node.body
-        except AttributeError as exc:
-            import ipdb
-            ipdb.set_trace()
-            raise
+    handler = childhand[typ]
+    ret = handler(node)
+    return ret
 
 
 def leaf(node: _ast.AST) -> bool:
