@@ -7,6 +7,12 @@ from micropy import dig
 from micropy import microscope as ms
 import _ast
 from patterns import patterns, Mismatch
+import operator as ops
+
+body = ops.attrgetter('body')
+hasbody = lambda o: hasattr(o, 'body')
+body_or_empty = funcy.iffy(hasbody, body, [])
+body_lvl_0 = lambda node: funcy.walk(body_or_empty, node.body)
 
 
 class Branch(object):
