@@ -1,7 +1,7 @@
 # yapf
 from ormsnack import tree
 from typing import Any, Tuple, Iterable, Mapping, Callable, Union
-import funcy as fn
+import funcy
 from micropy import lang
 from micropy import dig
 from micropy import microscope as ms
@@ -141,7 +141,7 @@ def simplify(node: _ast.AST) -> Node:
 
 
 childhand = {
-    list: fn.identity,
+    list: funcy.identity,
     _ast.BinOp: lambda n: (n.value.left, n.value.right),
     _ast.Str: lambda n: n.value.s,
     _ast.Expr: lambda n: n.value,
@@ -180,8 +180,8 @@ def leaf_or_children(node: _ast.AST) -> None:
 
 def every(node) -> None:
     "Does every"
-    start = fn.walk(children, children(node))
-    full = fn.flatten(start, lambda n: not leaf(n))
+    start = funcy.walk(children, children(node))
+    full = funcy.flatten(start, lambda n: not leaf(n))
     return [unpack(node) for node in [unpack(node) for node in full]]
 
 
