@@ -49,6 +49,9 @@ class Node(object):
     def __str__(self):
         return f'<{self.__class__.__name__} {self.spec}>'
 
+    def __rep__(self):
+        return str(self)
+
     def rebuild(self) -> _ast.AST:
         "Recreates tree."
         raise NotImplemented()
