@@ -82,10 +82,6 @@ class Block(Node, Branch):
     def __init__(self, full, head, body):
         super().__init__(full, head, body)
         self.cond_raw = head
-        # if self.ident == 'foo':
-        #     import ipdb
-        #     ipdb.set_trace()
-        #     pass
 
         if head is not None:
             self.head = simplify(head)
