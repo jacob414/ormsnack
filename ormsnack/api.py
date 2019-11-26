@@ -114,28 +114,34 @@ class Skip(Node):
     pass
 
 
-@patterns
-def simplificator():
-    if n is _ast.Return: lambda retrn: (Block, None, retrn.value)
-    if n is _ast.BinOp: lambda binop: (Expr, None, (binop.left, binop.right))
-    if n is _ast.Name: lambda name: (Sym, None, name.id)
-    if n is _ast.Str: lambda str_: (Const, None, str_.s)
-    if n is _ast.Num: lambda num: (Const, None, num.n)
-    if n is _ast.Module: lambda mod: (Skip, 0, 0)
-    if n is _ast.FunctionDef: lambda fnd: (Block, fnd.args, fnd.body)
-    if n is _ast.Expr: lambda exp: (Expr, None, exp.value)
-    if n is _ast.arguments: lambda args: (Expr, None, args.args)
-    if n is _ast.arg: lambda arg: (Sym, None, arg.arg)
+simplifiers = {
+    _ast.Return: lambda retrn: (Block, None, retrn.value),
+    _ast.BinOp: lambda binop: (Expr, None,
+                               (binop.left, binop.op, binop.right)),
+    _ast.Name: lambda name: (Sym, None, name.id),
+    _ast.Str: lambda str_: (Const, None, str_.s),
+    _ast.Num: lambda num: (Const, None, num.n),
+    _ast.Module: lambda mod: (Skip, 0, 0),
+    _ast.FunctionDef: lambda fnd: (Block, fnd.args, fnd.body),
+    _ast.Expr: lambda exp: (Expr, None, exp.value),
+    _ast.arguments: lambda args: (Expr, None, args.args),
+    _ast.arg: lambda arg: (Sym, None, arg.arg),
+    _ast.Add: lambda add: (
+        Expr,
+        None,
+        Sym(add, None, '+'),
+    ),
+}
 
 
 def categ(node: _ast.AST) -> Tuple[Node, Tuple]:
     "Does unpack"
-    return simplificator(node)(node)
+    return simplifiers[type(node)](node)
 
 
 def simplify(node: _ast.AST) -> Node:
-    "Does simplify"
-    Kind, head, body = simplificator(node)(node)
+    "Creates a simplified ormsnack Node object from any ast object"
+    Kind, head, body = simplifiers[type(node)](node)
     return Kind(node, head, body)
 
 
