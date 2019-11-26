@@ -20,7 +20,7 @@ class Branch(object):
 
     @property
     def children(self):
-        return [node for node in self.value]
+        return [node for node in self.value.elements]
 
 
 class Leaf(object):
