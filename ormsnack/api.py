@@ -67,15 +67,15 @@ class Statement(Node, Branch):
     pass
 
 
-# noderecur = f.isa(list, tuple, set)
-
-NodeOrIter = Union[_ast.AST, Iterable]
+NodeOrIter = Union[_ast.AST, Iterable, Node]
 
 
 def simpany(node_or_many: NodeOrIter) -> NodeOrIter:
-    "Does _simp"
+    "Converts objects or iterables to Ormsnack Node object(s)."
     if isinstance(node_or_many, _ast.AST):
         value = simplify(node_or_many)
+    elif isinstance(node_or_many, Node):
+        value = node_or_many
     else:
         value = [simplify(node) for node in node_or_many]
     return value
