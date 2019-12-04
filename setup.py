@@ -21,7 +21,7 @@ develop = (
 )  # yapf: disable
 
 setup(
-    name='micropy',
+    name='ormsnack',
     version='0.0.1',
     description=next(line for line in open('README.org').readlines()
                      if line.startswith('* '))[2:],
