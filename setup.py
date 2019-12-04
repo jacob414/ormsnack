@@ -17,6 +17,7 @@ develop = (
     "pytest>=5.0.1",
     "hypothesis>=4.24.3",
     "altered_states>=1.0.9",
+    "pytest-cov>=2.7.1",
 )  # yapf: disable
 
 setup(
