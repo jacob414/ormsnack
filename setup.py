@@ -17,10 +17,11 @@ develop = (
     "pytest>=5.0.1",
     "hypothesis>=4.24.3",
     "altered_states>=1.0.9",
+    "pytest-cov>=2.7.1",
 )  # yapf: disable
 
 setup(
-    name='micropy',
+    name='ormsnack',
     version='0.0.1',
     description=next(line for line in open('README.org').readlines()
                      if line.startswith('* '))[2:],

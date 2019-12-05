@@ -19,23 +19,21 @@ def getast(obj: Any, name: str = None) -> Any:
     return ast.Module(body=[next(node for node in body if node.name == name)])
 
 
-def compile_ast(tree_: types.CodeType, filename: str = None) -> types.CodeType:
+def compile_ast(tree_: ast.AST, filename: str = None) -> types.CodeType:
     "Compiles `tree_`, returning recompiled ast (if `compile()` succeeds"
     if filename is None:
-        print('<ormsnack.tree.eval_ast:?>')
+        filename = '<ormsnack.tree.eval_ast:?>'
     return compile(tree_, filename, 'exec')
 
 
 def exec_all(recompiled: types.CodeType) -> Mapping[str, Any]:
-    # type: () -> None
     "Does exec"
-    ns = {}
+    ns: Mapping[str, Any] = {}
     exec(recompiled, globals(), ns)
     return ns
 
 
 def exec_sym(recompiled: types.CodeType, symname: str) -> Any:
-    # type: () -> None
     "Does exec_sym"
     full = exec_all(recompiled)
     return full[symname]

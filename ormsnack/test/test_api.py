@@ -38,11 +38,9 @@ def test_simplify_return(Fob) -> None:
     "Should simplify_return"
     r_ = fnbody(Fob)[-1]
     ret = api.simplify(r_)
-    assert [el.value for el in ret.value.value] == ['x', 1]
+    assert [x[0] for x in ret.value[0].values] == ['x', '+', 1]
 
 
 def test_snacka_simplified(Fob) -> None:
     "Should snacka_simplified"
-    # Clumsy yet but a start..
-    assert [simpl.value.value
-            for simpl in Fob.rep.value[0:3]] == ['Docstring', 1, 2]
+    assert [el.value for el in Fob.rep.values[0:3]] == ['Docstring', 1, 2]

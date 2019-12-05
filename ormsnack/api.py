@@ -1,13 +1,16 @@
 # yapf
 from ormsnack import tree
-from typing import Any, Tuple, Iterable, Mapping, Callable, Union
-import funcy
-from micropy import lang
-from micropy import dig
-from micropy import microscope as ms
+from typing import Any, Tuple, List, Iterable, Mapping, Callable, Union
+import funcy  # type: ignore
+from micropy import lang  # type: ignore
+from micropy import dig  # type: ignore
+from micropy import microscope as ms  # type: ignore
 import _ast
-from patterns import patterns, Mismatch
+from patterns import patterns, Mismatch  # type: ignore
 import operator as ops
+from . import astmappings
+
+from clipboard import copy as k
 
 body = ops.attrgetter('body')
 hasbody = lambda o: hasattr(o, 'body')
@@ -15,39 +18,44 @@ body_or_empty = funcy.iffy(hasbody, body, [])
 body_lvl_0 = lambda node: funcy.walk(body_or_empty, node.body)
 
 
-class Branch(object):
-    "Marker for branching nodes"
-
-    @property
-    def children(self):
-        return [node for node in self.value.elements]
-
-
-class Leaf(object):
-    "Marker for leaf nodes"
-
-
 class Node(object):
-    def __init__(self, full, head, body):
-        self.value = f'VALUE? {full}'
-        self.head = None
+    def __init__(self, full, body, cond):
+        self._value = f'VALUE? {full}'
         self.full = full
-        self.desc = full.__class__.__name__
+        try:
+            self.desc = astmappings.desc(full)
+        except KeyError:
+            self.desc = full.__class__.__name__
         try:
             self.ident = full.name
         except AttributeError:
             self.ident = full.__class__.__name__
+        self.cond_hook(cond)
+
+    def cond_hook(self, cond):
+        pass
 
     @property
     def spec(self):
-        return f'{self.desc}:{self.ident}'
+        return f'{self.desc}'
+
+    @property
+    def children(self) -> Union[List['Node'], List]:
+        "Does children"
+        return []
 
     @property
     def deepval(self):
         res = False
 
+    @property
+    def codeish(self) -> str:
+        "Does express"
+        return ' '.join(
+            (str(self.desc), *(el.codeish for el in self.children)))
+
     def __str__(self):
-        return f'<{self.__class__.__name__} {self.spec}>'
+        return f'<{self.__class__.__name__}:{self.spec}>'
 
     def __rep__(self):
         return str(self)
@@ -63,86 +71,146 @@ class Node(object):
         raise NotImplemented()
 
 
+class Branch(object):
+    "Marker for branching nodes"
+
+    def cond_hook(self, cond) -> None:
+        "Does role_hook"
+        _, conds = simplifiers(cond)(cond)
+        self.cond = [simpany(cond) for cond in cond]
+
+    @property
+    def value(self) -> Any:
+        "Does value"
+        return self._value
+
+    @property
+    def children(self) -> Union[List[Node], List]:
+        return [node for node in self._value.elements]
+
+
+isbranch = funcy.isa(Branch)
+
+
+class Leaf(object):
+    "Marker for leaf nodes"
+
+    @property
+    def value(self) -> Any:
+        "Does value"
+        return self._value[0]
+
+
+isleaf = funcy.isa(Branch)
+
+
 class Statement(Node, Branch):
     pass
 
 
-NodeOrIter = Union[_ast.AST, Iterable, Node]
-
-
-def simpany(node_or_many: NodeOrIter) -> NodeOrIter:
-    "Converts objects or iterables to Ormsnack Node object(s)."
-    if isinstance(node_or_many, _ast.AST):
-        value = simplify(node_or_many)
-    elif isinstance(node_or_many, Node):
-        value = node_or_many
-    else:
-        value = [simplify(node) for node in node_or_many]
-    return value
-
-
 class Block(Node, Branch):
-    def __init__(self, full, head, body):
-        super().__init__(full, head, body)
-        self.cond_raw = head
+    def __init__(self, full, body, cond):
+        super().__init__(full, body, cond)
 
-        if head is not None:
-            self.head = simplify(head)
+        self.body = simpany(body)
+        self.cond = simpany(cond)
 
-        self.cnt = self.value = simpany(body)
+        self.cnt = self._value = self.body
+
+    @property
+    def values(self):
+        return tuple(funcy.flatten(value._value for value in self.body))
+
+    @property
+    def codeish(self) -> str:
+        "Does codeish"
+        return self.desc.format()
 
 
 class Sym(Node, Leaf):
-    def __init__(self, full, head, body):
-        super().__init__(full, head, body)
-        self.desc = self.name = self.value = body
+    def __init__(self, full, body, cond):
+        super().__init__(full, body, cond)
+        self.desc = self.name = self._value = body
+
+    @property
+    def codeish(self) -> str:
+        return str(self._value)
 
 
 class Expr(Node, Leaf):
-    def __init__(self, full, head, body):
-        super().__init__(full, head, body)
-        self.elements = self.value = simpany(body)
+    def __init__(self, full, body, cond):
+        super().__init__(full, body, cond)
+        self.elements = self._value = simpany(body)
+
+    @property
+    def values(self):
+        return [el._value for el in self.elements]
+
+    @property
+    def codeish(self) -> str:
+        "Does codeish"
+        return ', '.join((el.codeish for el in self._value.elements))
 
 
-class Const(Node, Leaf):
-    def __init__(self, full, head, body):
-        super().__init__(full, head, body)
-        self.value = body
+class Literal(Node, Leaf):
+    def __init__(self, full, body, cond):
+        super().__init__(full, body, cond)
+        self._value = self.name = body
+        self.desc = body
+
+    @property
+    def codeish(self) -> str:
+        "Does codeish"
+        return str(self._value)
 
 
-class Skip(Node):
-    pass
+# Unpack values
+simplifiers = lang.typemapx({
+    _ast.Return:
+    lambda retrn: (Block, retrn.value, None),
+    _ast.BinOp:
+    lambda binop: (Expr, (binop.left, binop.op, binop.right), None),
+    _ast.Name:
+    lambda name: (Sym, name.id, None),
+    _ast.Str:
+    lambda str_: (Literal, str_.s, None),  # ok
+    _ast.Num:
+    lambda num: (Literal, num.n, None),
+    _ast.Module:
+    lambda mod: (Skip, 0, 0),
+    _ast.FunctionDef:
+    lambda fnd: (Block, fnd.body, fnd.args),
+    _ast.Expr:
+    lambda exp: (Expr, exp.value, None),
+    _ast.arguments:
+    lambda args: (Expr, args.args, None),
+    _ast.arg:
+    lambda arg: (Sym, arg.arg, None),
+    _ast.Add:
+    lambda add: (Sym, '+', None),
+})
+
+NodeOrIter = Union[_ast.AST, Iterable, Node]
 
 
-simplifiers = {
-    _ast.Return: lambda retrn: (Block, None, retrn.value),
-    _ast.BinOp: lambda binop: (Expr, None,
-                               (binop.left, binop.op, binop.right)),
-    _ast.Name: lambda name: (Sym, None, name.id),
-    _ast.Str: lambda str_: (Const, None, str_.s),
-    _ast.Num: lambda num: (Const, None, num.n),
-    _ast.Module: lambda mod: (Skip, 0, 0),
-    _ast.FunctionDef: lambda fnd: (Block, fnd.args, fnd.body),
-    _ast.Expr: lambda exp: (Expr, None, exp.value),
-    _ast.arguments: lambda args: (Expr, None, args.args),
-    _ast.arg: lambda arg: (Sym, None, arg.arg),
-    _ast.Add: lambda add: (
-        Expr,
-        None,
-        Sym(add, None, '+'),
-    ),
-}
+def simpany(node_or_many: NodeOrIter) -> Union[Node, Iterable[Node]]:
+    "Converts objects or iterables to Ormsnack Node object(s)."
+    if isinstance(node_or_many, _ast.AST):
+        return simplify(node_or_many)
+    elif isinstance(node_or_many, Node):
+        return node_or_many
+    elif funcy.is_seqcoll(node_or_many):
+        return [simplify(node) for node in node_or_many]
+    raise TypeError(f'Unclassifiable node ({node_or_many!r})')
 
 
-def categ(node: _ast.AST) -> Tuple[Node, Tuple]:
-    "Does unpack"
-    return simplifiers[type(node)](node)
-
-
-def simplify(node: _ast.AST) -> Node:
+def simplify(node: Union[_ast.AST, Iterable]) -> Union[Node, Iterable[Node]]:
     "Creates a simplified ormsnack Node object from any ast object"
-    Kind, head, body = simplifiers[type(node)](node)
-    return Kind(node, head, body)
+
+    Kind, _, _ = simplifiers(node)
+    subnodes = astmappings.subnodes(node)
+
+    return Kind(node, *subnodes)
 
 
 childhand = {
@@ -154,40 +222,8 @@ childhand = {
 }
 
 
-def unpack(node: _ast.AST) -> None:
-    "Does unpack"
-    return childhand[type(children(node))](node)
-
-
-def children(node: _ast.AST) -> Iterable:
-    "Does child"
-    typ = type(node)
-    if typ is list:
-        return node
-
-    handler = childhand[typ]
-    ret = handler(node)
-    return ret
-
-
-def leaf(node: _ast.AST) -> bool:
-    "Does leaf"
-    return not hasattr(node, 'body')
-
-
-def leaf_or_children(node: _ast.AST) -> None:
-    "Does leaf_or_children"
-    if leaf(node):
-        return node
-    else:
-        return children(node)
-
-
-def every(node) -> None:
-    "Does every"
-    start = funcy.walk(children, children(node))
-    full = funcy.flatten(start, lambda n: not leaf(n))
-    return [unpack(node) for node in [unpack(node) for node in full]]
+class ASTQuery(lang.ComposePiping):
+    pass
 
 
 class Snack(object):
@@ -204,16 +240,8 @@ class Snack(object):
 
     def q(self, query):
         "Perform a query on AST tree."
-        org = self.org
-        self.lq = Kind = getattr(_ast, query)
-        full = every(org)
+        res = self.res = tuple(filter(query, self.rep.values))
         return self
-
-    def vals(self) -> Iterable:
-        "Does vals"
-        org = self.org
-        res = self.qres
-        pass
 
 
 def snacka(ob: Any) -> None:
