@@ -8,7 +8,7 @@ subnodes = callbytype({
     Str: lambda str_: ((str_.s, ), ()),
     Add: lambda add_: (('+', ), ()),
     Sub: lambda add_: (('-', ), ()),
-    Return: lambda ret: ((ret.value, ), ()),
+    Return: lambda ret: ((ret.value, ), (ret.value, )),
     FunctionDef: lambda fdef: (fdef.body, fdef.args.args),
     arguments: lambda args: (args.args, ()),
     Expr: lambda expr: ((expr.value, ), ()),
@@ -16,6 +16,21 @@ subnodes = callbytype({
     Num: lambda num: ((num.n, ), ()),
     Name: lambda name: ((name.id, ), ()),
     arg: lambda arg_: ((arg_.arg, ), ()),
+})
+
+# Codelike names
+codename = typemapx({
+    Str: lambda str_: 'str',
+    Add: lambda add_: '+',
+    Sub: lambda add_: '-',
+    Return: lambda ret: 'return',
+    FunctionDef: lambda fdef: 'def',
+    arguments: lambda args: '()',
+    Expr: lambda expr: 'XXX expr?',
+    BinOp: lambda bo: 'XXX binop?',
+    Num: lambda num: repr(num.n),
+    Name: lambda name: name.id,
+    arg: lambda arg_: repr(arg_.arg),
 })
 
 # Express as code / for human

@@ -45,8 +45,8 @@ class Node(object):
         return []
 
     @property
-    def deepval(self):
-        res = False
+    def primval(self):
+        raise NotImplemented('Unsubclassed Node')
 
     @property
     def codeish(self) -> str:
@@ -76,13 +76,17 @@ class Branch(object):
 
     def cond_hook(self, cond) -> None:
         "Does role_hook"
-        _, conds = simplifiers(cond)(cond)
-        self.cond = [simpany(cond) for cond in cond]
+        self.cond = simpany(cond)
 
     @property
     def value(self) -> Any:
         "Does value"
         return self._value
+
+    @property
+    def primval(self) -> None:
+        "Does primval"
+        raise NotImplemented('Branch node have no primval')
 
     @property
     def children(self) -> Union[List[Node], List]:
@@ -100,26 +104,51 @@ class Leaf(object):
         "Does value"
         return self._value[0]
 
+    @property
+    def primval(self) -> Any:
+        "Does primval"
+        return self._value[0]
+
 
 isleaf = funcy.isa(Branch)
 
 
 class Statement(Node, Branch):
-    pass
+    """A statement node. A statement is considered to have a name and
+    exactly ONE `Exper` in it.
+
+    """
+    def __init__(self, full, body, cond) -> None:
+        super().__init__(full, body, cond)
+        self._value = self
+        self._value.elements = body
+        self.desc = astmappings.codename(full)
+        self.cnt = simpany(body)
+
+    @property
+    def children(self):
+        return self.cnt
 
 
 class Block(Node, Branch):
+    """
+    ONE `Statement` with arbitrary hierarchy of child Nodes.
+    """
     def __init__(self, full, body, cond):
         super().__init__(full, body, cond)
 
         self.body = simpany(body)
         self.cond = simpany(cond)
 
+        # Uughh bypass `simpany()` infinite recursion otherwise. XXX
+        self.stmt = Statement(full, body, cond)
+
         self.cnt = self._value = self.body
 
     @property
     def values(self):
-        return tuple(funcy.flatten(value._value for value in self.body))
+        return (self.stmt, ) + tuple(
+            funcy.flatten(value._value for value in self.body))
 
     @property
     def codeish(self) -> str:
@@ -167,7 +196,7 @@ class Literal(Node, Leaf):
 # Unpack values
 simplifiers = lang.callbytype({
     _ast.Return:
-    lambda retrn: (Block, retrn.value, None),
+    lambda retrn: (Statement, retrn.value, None),
     _ast.BinOp:
     lambda binop: (Expr, (binop.left, binop.op, binop.right), None),
     _ast.Name:
@@ -239,7 +268,7 @@ class Snack(object):
             self.simpler = simplify(self.org.body[0])
         return self.simpler
 
-    def q(self, query):
+    def q(self, query: ASTQuery):
         "Perform a query on AST tree."
         res = self.res = tuple(node for node in self.rep.values if query(node))
         return self
