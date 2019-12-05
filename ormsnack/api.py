@@ -165,7 +165,7 @@ class Literal(Node, Leaf):
 
 
 # Unpack values
-simplifiers = lang.typemapx({
+simplifiers = lang.callbytype({
     _ast.Return:
     lambda retrn: (Block, retrn.value, None),
     _ast.BinOp:
@@ -223,7 +223,8 @@ childhand = {
 
 
 class ASTQuery(lang.ComposePiping):
-    pass
+    def __init__(self):
+        super().__init__(kind='pipe', format=bool)
 
 
 class Snack(object):
@@ -240,7 +241,7 @@ class Snack(object):
 
     def q(self, query):
         "Perform a query on AST tree."
-        res = self.res = tuple(filter(query, self.rep.values))
+        res = self.res = tuple(node for node in self.rep.values if query(node))
         return self
 
 
