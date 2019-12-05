@@ -121,6 +121,7 @@ class Statement(Node, Branch):
     def __init__(self, full, body, cond) -> None:
         super().__init__(full, body, cond)
         self._value = self
+        self._value.elements = body
         self.desc = astmappings.codename(full)
         self.cnt = simpany(body)
 
