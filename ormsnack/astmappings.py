@@ -1,10 +1,10 @@
 # yapf
 
 from _ast import *
-from micropy.lang import typemapx  # type: ignore
+from micropy.lang import callbytype  # type: ignore
 
 # Unpack values / condition
-subnodes = typemapx({
+subnodes = callbytype({
     Str: lambda str_: ((str_.s, ), ()),
     Add: lambda add_: (('+', ), ()),
     Sub: lambda add_: (('-', ), ()),
@@ -19,7 +19,18 @@ subnodes = typemapx({
 })
 
 # Express as code / for human
-desc = typemapx({
+codename = callbytype({
+    Str: lambda s: "'{}'".format(s.s),
+    Add: lambda _: '+',
+    Sub: lambda _: '-',
+    Return: lambda kids: 'return',
+    FunctionDef: lambda fdef: f'def {fdef.name}',
+    arguments: lambda args: '(XXX)',
+    Module: lambda mod: 'XXX (module)',
+})
+
+# Express as code / for human
+desc = callbytype({
     Str: ('str', lambda s: ("'{}'".format(s.s))),
     Add: ('+', lambda _: '+'),
     Sub: ('-', lambda _: '-'),
@@ -36,7 +47,7 @@ desc = typemapx({
 })
 
 # Express as code / for human
-desc = typemapx({
+desc = callbytype({
     Str:
     lambda s: "'{}'".format(s.s),
     Add:
