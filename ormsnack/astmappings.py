@@ -19,7 +19,7 @@ subnodes = callbytype({
 })
 
 # Codelike names
-codename = typemapx({
+codename = callbytype({
     Str: lambda str_: 'str',
     Add: lambda add_: '+',
     Sub: lambda add_: '-',
