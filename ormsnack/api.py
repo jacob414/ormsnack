@@ -9,6 +9,7 @@ import _ast
 from patterns import patterns, Mismatch  # type: ignore
 import operator as ops
 from . import astmappings
+import re
 
 from clipboard import copy as k
 
@@ -251,13 +252,40 @@ childhand = {
 }
 
 
-class ASTQuery(lang.ComposePiping):
-    def __init__(self):
+def named(needle: str, matches: Callable) -> None:
+    "Does named"
+
+    def match(x: Node) -> bool:
+        "Does match"
+        print(x)
+        try:
+            thing = repr(x)
+            print(f'{thing} = {needle}?')
+            res = matches(x.ident)
+            if res:
+                print(f'{needle} matches {thing}.')
+                return True
+            else:
+                print(f'{needle} does not match {thing}.')
+                return False
+        except Exception as exc:
+            import ipdb
+            ipdb.set_trace()
+            pass
+            print(1)
+
+    return match
+
+
+class ASTQuery(lang.ComposePiping, lang.LogicPiping):
+    def __init__(self, snack=None):
         super().__init__(kind='pipe', format=bool)
+        self.snack = snack
 
 
-class Snack(object):
+class Snack(lang.ComposePiping, lang.LogicPiping):
     def __init__(self, tr):
+        lang.LogicPiping.__init__(self, kind='pipe')
         self.org = tr
         self.simpler = None
 
@@ -268,11 +296,43 @@ class Snack(object):
             self.simpler = simplify(self.org.body[0])
         return self.simpler
 
-    def q(self, query: ASTQuery):
-        "Perform a query on AST tree."
-        res = self.res = tuple(node for node in self.rep.values if query(node))
+    def __getitem__(self, idx:Any) -> Iterable[Node]:
+        "Does __getitem__"
+        self.run_q()
+        return self.res[idx]
+
+    def __len__(self) -> int:
+        self.run_q()
+        return len(self.res)
+
+    def __rshift__(self, stepf: Callable[[Any, None, None], Any]) -> None:
+        "Bitwise OR as simple function composition"
+        self.logically(stepf, True)
         return self
 
+    def __lshift__(self, name: str) -> None:
+        "Bitwise OR as simple function composition"
+        def exact(desc):
+            return desc == name
+        self.logically(named(name, exact), True)
+        return self
+
+    def __matmul__(self, pattern: str) -> None:
+        "Bitwise OR as simple function composition"
+        rx = re.compile(pattern)
+        self.logically(named(pattern, rx.match), True)
+        return self
+
+    def run_q(self):
+        "Perform a query on AST tree."
+        res = self.res = tuple(node for node in self.rep.values if self(node))
+        return self
+
+    @property
+    def q(self) -> None:
+        "Does q"
+        self.query = ASTQuery(self)
+        return self
 
 def snacka(ob: Any) -> None:
     "Does snacka"

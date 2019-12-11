@@ -24,7 +24,7 @@ def Fob() -> api.Snack:
 
 def fnbody(fob_) -> None:
     "Does fnboxy"
-    return dig.dig(fob_, 'org.body.0.body')
+    return fob_.org.body[0].body[-1]
 
 
 def test_snacka(Fob) -> None:
@@ -36,7 +36,7 @@ def test_snacka(Fob) -> None:
 
 def test_simplify_return(Fob) -> None:
     "Should simplify_return"
-    r_ = fnbody(Fob)[-1]
+    r_ = fnbody(Fob)
     ret = api.simplify(r_)
     # XXX
     assert ret.children[0].values == [('x', ), ('+', ), (1, )]
