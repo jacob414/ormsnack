@@ -257,16 +257,12 @@ def named(needle: str, matches: Callable) -> None:
 
     def match(x: Node) -> bool:
         "Does match"
-        print(x)
         try:
             thing = repr(x)
-            print(f'{thing} = {needle}?')
             res = matches(x.ident)
             if res:
-                print(f'{needle} matches {thing}.')
                 return True
             else:
-                print(f'{needle} does not match {thing}.')
                 return False
         except Exception as exc:
             import ipdb
