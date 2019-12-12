@@ -278,29 +278,6 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
         super().__init__(kind='pipe', format=bool)
         self.snack = snack
 
-
-class Snack(lang.ComposePiping, lang.LogicPiping):
-    def __init__(self, tr):
-        lang.LogicPiping.__init__(self, kind='pipe')
-        self.org = tr
-        self.simpler = None
-
-    @property
-    def rep(self):
-        "Simplify tree"
-        if self.simpler is None:
-            self.simpler = simplify(self.org.body[0])
-        return self.simpler
-
-    def __getitem__(self, idx:Any) -> Iterable[Node]:
-        "Does __getitem__"
-        self.run_q()
-        return self.res[idx]
-
-    def __len__(self) -> int:
-        self.run_q()
-        return len(self.res)
-
     def __rshift__(self, stepf: Callable[[Any, None, None], Any]) -> None:
         "Bitwise OR as simple function composition"
         self.logically(stepf, True)
@@ -308,8 +285,10 @@ class Snack(lang.ComposePiping, lang.LogicPiping):
 
     def __lshift__(self, name: str) -> None:
         "Bitwise OR as simple function composition"
+
         def exact(desc):
             return desc == name
+
         self.logically(named(name, exact), True)
         return self
 
@@ -324,11 +303,35 @@ class Snack(lang.ComposePiping, lang.LogicPiping):
         res = self.res = tuple(node for node in self.rep.values if self(node))
         return self
 
+
+class Snack(ASTQuery):
+    def __init__(self, tr):
+        lang.LogicPiping.__init__(self, kind='pipe')
+        self.org = tr
+        self.simpler = None
+
+    @property
+    def rep(self):
+        "Simplify tree"
+        if self.simpler is None:
+            self.simpler = simplify(self.org.body[0])
+        return self.simpler
+
+    def __getitem__(self, idx: Any) -> Iterable[Node]:
+        "Does __getitem__"
+        self.run_q()
+        return self.res[idx]
+
+    def __len__(self) -> int:
+        self.run_q()
+        return len(self.res)
+
     @property
     def q(self) -> None:
         "Does q"
         self.query = ASTQuery(self)
         return self
+
 
 def snacka(ob: Any) -> None:
     "Does snacka"
