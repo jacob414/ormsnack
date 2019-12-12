@@ -293,7 +293,7 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
         return self
 
     def __matmul__(self, pattern: str) -> None:
-        "Bitwise OR as simple function composition"
+        "Filter nodes by RegExp pattern `pattern`"
         rx = re.compile(pattern)
         self.logically(named(pattern, rx.match), True)
         return self
