@@ -10,16 +10,68 @@ from patterns import patterns, Mismatch  # type: ignore
 import operator as ops
 from . import astmappings
 import re
-
-from clipboard import copy as k
+from abc import ABC
 
 body = ops.attrgetter('body')
 hasbody = lambda o: hasattr(o, 'body')
 body_or_empty = funcy.iffy(hasbody, body, [])
-body_lvl_0 = lambda node: funcy.walk(body_or_empty, node.body)
 
 
 class Node(object):
+    """The top-level abstraction for Node's. Beware that at the top of the
+    module an empty class that is later overridden by one with the
+    same name is declared. This is to make the typing hints more
+    readable.
+
+    """
+    pass
+
+
+class Branch(Node, ABC):
+    "Marker for branching nodes"
+    _value: Node = None
+
+    def cond_hook(self, cond) -> None:
+        "Does role_hook"
+        self.cond = simpany(cond)
+
+    @property
+    def value(self) -> Any:
+        "Does value"
+        return self._value
+
+    @property
+    def primval(self) -> None:
+        "Does primval"
+        raise NotImplemented('Branch node have no primval')
+
+    @property
+    def children(self) -> Union[List['Node'], List]:
+        return [node for node in self._value.elements]
+
+
+isbranch = funcy.isa(Branch)
+
+
+class Leaf(Node, ABC):
+    "Marker for leaf nodes"
+    _value: Iterable['Node'] = ()
+
+    @property
+    def value(self) -> Any:
+        "Does value"
+        return self._value[0]
+
+    @property
+    def primval(self) -> Any:
+        "Does primval"
+        return self._value[0]
+
+
+isleaf = funcy.isa(Branch)
+
+
+class Node(Node):
     def __init__(self, full, body, cond):
         self._value = f'VALUE? {full}'
         self.full = full
@@ -70,48 +122,6 @@ class Node(object):
         # exec(compile(self.rebuild(), '?', 'single'), globals_, ns)
         # return ns
         raise NotImplemented()
-
-
-class Branch(object):
-    "Marker for branching nodes"
-
-    def cond_hook(self, cond) -> None:
-        "Does role_hook"
-        self.cond = simpany(cond)
-
-    @property
-    def value(self) -> Any:
-        "Does value"
-        return self._value
-
-    @property
-    def primval(self) -> None:
-        "Does primval"
-        raise NotImplemented('Branch node have no primval')
-
-    @property
-    def children(self) -> Union[List[Node], List]:
-        return [node for node in self._value.elements]
-
-
-isbranch = funcy.isa(Branch)
-
-
-class Leaf(object):
-    "Marker for leaf nodes"
-
-    @property
-    def value(self) -> Any:
-        "Does value"
-        return self._value[0]
-
-    @property
-    def primval(self) -> Any:
-        "Does primval"
-        return self._value[0]
-
-
-isleaf = funcy.isa(Branch)
 
 
 class Statement(Node, Branch):
