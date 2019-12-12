@@ -110,7 +110,7 @@ class Node(Node):
     def __str__(self):
         return f'<{self.__class__.__name__}:{self.spec}>'
 
-    def __rep__(self):
+    def __repr__(self):
         return str(self)
 
     def rebuild(self) -> _ast.AST:
