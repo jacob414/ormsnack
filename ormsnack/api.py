@@ -284,7 +284,7 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
         return self
 
     def __lshift__(self, name: str) -> None:
-        "Bitwise OR as simple function composition"
+        "Filter nodes by parameter `name`, exact matching"
 
         def exact(desc):
             return desc == name
