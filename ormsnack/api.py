@@ -356,19 +356,9 @@ class Snack(ASTQuery):
             self.simpler = simplify(self.org.body[0])
         return self.simpler
 
-    def __getitem__(self, idx: Any) -> Iterable[Node]:
-        "Does __getitem__"
-        self.run_q()
-        return self.res[idx]
-
-    def __len__(self) -> int:
-        self.run_q()
-        return len(self.res)
-
-    @property
-    def q(self) -> 'Snack':
-        "Does q"
-        self.query = ASTQuery(self)
+    def q(self, query: ASTQuery):
+        "Perform a query on AST tree."
+        res = self.res = tuple(node for node in self.rep.values if query(node))
         return self
 
 
