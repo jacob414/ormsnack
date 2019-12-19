@@ -7,6 +7,7 @@ import _ast
 import codegen
 from micropy import microscope as ms
 from micropy import dig
+from micropy.testing import fixture
 
 
 def foo(x: Any) -> None:
@@ -38,10 +39,21 @@ def test_simplify_return(Fob) -> None:
     "Should simplify_return"
     r_ = fnbody(Fob)
     ret = api.simplify(r_)
-    # XXX
-    assert ret.children[0].values == [('x', ), ('+', ), (1, )]
+    assert [el.value for el in ret.children] == ['x', '+', 1]
 
 
 def test_snacka_simplified(Fob) -> None:
     "Should snacka_simplified"
     assert [el.value for el in Fob.rep.values[1:4]] == ['Docstring', 1, 2]
+
+
+@fixture.params(
+    "index, spec, primval",
+    (0, str, "Docstring"),
+    (1, int, 1),
+    (3, 'return', ['x', '+', 1]),
+)
+def test_node_base_props(Fob, index, spec, primval) -> None:
+    "Should snacka_codeish"
+    node = Fob[index]
+    assert (node.spec, node.primval) == (spec, primval)

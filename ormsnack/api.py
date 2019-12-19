@@ -1,13 +1,10 @@
 # yapf
 from ormsnack import tree
-from typing import Any, Tuple, List, Iterable, Mapping, Callable, Union, Optional
+from typing import Any, List, Iterable, Mapping, Callable, Union, Optional
 import funcy  # type: ignore
 from micropy import lang  # type: ignore
-from micropy import dig  # type: ignore
-from micropy import microscope as ms  # type: ignore
 import _ast
 import ast
-from patterns import patterns, Mismatch  # type: ignore
 import operator as ops
 from . import astmappings
 import re
@@ -49,6 +46,11 @@ class _Node(object):
         "Should return the simplified form of the ast.AST tree"
         pass
 
+    @property
+    @abstractmethod
+    def primval(self) -> Any:
+        pass
+
 
 class Branch(_Node, ABC):
     "Marker for branching nodes"
@@ -63,9 +65,9 @@ class Branch(_Node, ABC):
         return self._value
 
     @property
-    def primval(self) -> None:
+    def primval(self) -> Any:
         "Does primval"
-        raise NotImplemented('Branch node have no primval')
+        raise NotImplementedError("Branch nodes doesn't have primitive values")
 
     @property
     def children(self) -> List[_Node]:
@@ -87,13 +89,14 @@ class Leaf(_Node, ABC):
 
     @property
     def value(self) -> Any:
-        "Does value"
+        """Value property - for leaf nodes that means the Python literal for
+        literals, the name as a String for Symbols."""
         return self._value[0]
 
     @property
     def primval(self) -> Any:
         "Does primval"
-        return self._value[0]
+        return self.value
 
     @property
     def simplified(self) -> Optional[_Node]:
@@ -109,13 +112,18 @@ isnode = funcy.isa(_Node)
 
 
 class Node(_Node):
+    """
+    Defined on Node:
+
+    .spec = details about Node as str, e.g 'return'
+    .ident = an identifier if applicable, otherwise same as .spec
+    .primval = expressed as a Python primitive value
+
+    .desc = ??? description?
+    """
     def __init__(self, full, body, cond):
         self._value = f'VALUE? {full}'
         self.full = full
-        try:
-            self.desc = astmappings.desc(full)
-        except KeyError:
-            self.desc = full.__class__.__name__
         try:
             self.ident = full.name
         except AttributeError:
@@ -126,17 +134,18 @@ class Node(_Node):
         pass
 
     @property
-    def spec(self):
-        return f'{self.desc}'
-
-    @property
     def children(self) -> Union[List[_Node], List]:
         "Does children"
         return []
 
     @property
-    def primval(self):
-        raise NotImplemented('Unsubclassed Node')
+    def spec(self) -> str:
+        "Does spec"
+        try:
+            return astmappings.desc(self.full.value)
+        except KeyError:
+            # XXX Breaks Zen
+            return self.full.__class__.__name__.lower()
 
     @property
     def codeish(self) -> str:
@@ -145,20 +154,20 @@ class Node(_Node):
             (str(self.desc), *(el.codeish for el in self.children)))
 
     def __str__(self):
-        return f'<{self.__class__.__name__}:{self.spec}>'
+        return f'<{self.__class__.__name__}:{self.codeish}>'
 
     def __repr__(self):
         return str(self)
 
     def rebuild(self) -> ast.AST:
         "Recreates tree."
-        raise NotImplemented()
+        raise NotImplementedError('Node.rebuild(): TBD')
 
     def eval(self, globals_: Mapping, ns: Mapping, **env: Any) -> None:
         "Does eval"
         # exec(compile(self.rebuild(), '?', 'single'), globals_, ns)
         # return ns
-        raise NotImplemented()
+        raise NotImplementedError('Node.eval(): TBD')
 
 
 class Statement(Node, Branch):
@@ -168,14 +177,36 @@ class Statement(Node, Branch):
     """
     def __init__(self, full, body, cond) -> None:
         super().__init__(full, body, cond)
+        # if type(full) == ast.Return:
+        # import ipdb; ipdb.set_trace(); pass
+
         self._value = [self]
         self.elements = body
-        self.desc = astmappings.codename(full)
+        desc, codeme = astmappings.desc(full)
+        self.name = getattr(full, 'name', desc)
+        self.desc = desc
+        self.codeme = codeme
         self.cnt = simpany(body)
+        self.cond = simpany(cond)
+        # self.cond = [astmappings.desc(part) for part in cond]
+
+    @property
+    def codeish(self):
+        # return astmappings.desc(self.full).format(', '.join(
+        # el.value for el in self.cond)) + ':'
+        return self.codeme
 
     @property
     def children(self):
         return self.cnt
+
+    @property
+    def spec(self) -> str:
+        return self.name
+
+    @property
+    def primval(self) -> Any:
+        return [child.value for child in self.children]
 
 
 class Block(Node, Branch):
@@ -198,13 +229,25 @@ class Block(Node, Branch):
         return (self.stmt, ) + tuple(
             funcy.flatten(value._value for value in self.body))
 
+    def __getitem__(self, idx: Any) -> Iterable[Node]:
+        "Does __getitem__"
+        return self.body[idx]
+
+    def __len__(self) -> int:
+        return len(self.body)
+
     @property
+    @property
+    def spec(self) -> str:
+        "Does spec"
+        return self.codeish
+
     def codeish(self) -> str:
         "Does codeish"
-        return self.desc.format()
+        return self.desc.format(', '.join((el.value for el in self.cond)))
 
 
-class Sym(Node, Leaf):
+class Symbol(Node, Leaf):
     def __init__(self, full, body, cond):
         super().__init__(full, body, cond)
         self.desc = self.name = self._value = body
@@ -213,20 +256,40 @@ class Sym(Node, Leaf):
     def codeish(self) -> str:
         return str(self._value)
 
+    @property
+    def primval(self) -> Any:
+        return self._value
+
 
 class Expr(Node, Leaf):
     def __init__(self, full, body, cond):
         super().__init__(full, body, cond)
         self.elements = self._value = simpany(body)
+        desc, codeme = astmappings.desc(full)
+        self.desc, self.codeme = desc, codeme
 
     @property
     def values(self):
         return [el._value for el in self.elements]
 
     @property
+    def primval(self) -> Any:
+        "Does primval"
+        els = len(self.elements)
+        if els == 1:
+            return self.elements[0].value
+        else:
+            return [el.primval for el in self.elements]
+
+    @property
     def codeish(self) -> str:
         "Does codeish"
         return ', '.join((el.codeish for el in self.elements))
+
+    @property
+    def spec(self) -> str:
+        "Does spec"
+        return astmappings.desc(self.full.value)[0]
 
 
 class Literal(Node, Leaf):
@@ -234,6 +297,10 @@ class Literal(Node, Leaf):
         super().__init__(full, body, cond)
         self._value = self.name = body
         self.desc = body
+
+    @property
+    def primval(self) -> Any:
+        return self._value
 
     @property
     def codeish(self) -> str:
@@ -248,13 +315,11 @@ simplifiers = lang.callbytype({
     _ast.BinOp:
     lambda binop: (Expr, (binop.left, binop.op, binop.right), None),
     _ast.Name:
-    lambda name: (Sym, name.id, None),
+    lambda name: (Symbol, name.id, None),
     _ast.Str:
     lambda str_: (Literal, str_.s, None),  # ok
     _ast.Num:
     lambda num: (Literal, num.n, None),
-    # _ast.Module:
-    # lambda mod: (Skip, 0, 0),
     _ast.FunctionDef:
     lambda fnd: (Block, fnd.body, fnd.args),
     _ast.Expr:
@@ -262,9 +327,9 @@ simplifiers = lang.callbytype({
     _ast.arguments:
     lambda args: (Expr, args.args, None),
     _ast.arg:
-    lambda arg: (Sym, arg.arg, None),
+    lambda arg: (Symbol, arg.arg, None),
     _ast.Add:
-    lambda add: (Sym, '+', None),
+    lambda add: (Symbol, '+', None),
 })
 
 NodeOrIter = Union[ast.AST, Iterable, Node]
@@ -339,7 +404,7 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
 
     def run_q(self):
         "Perform a query on AST tree."
-        res = self.res = tuple(node for node in self.rep.values if self(node))
+        self.res = tuple(node for node in self.rep.values if self(node))
         return self
 
 
@@ -356,14 +421,24 @@ class Snack(ASTQuery):
             self.simpler = simplify(self.org.body[0])
         return self.simpler
 
+    @property
+    def cur(self) -> None:
+        "Does run"
+        if len(self.ops) > 0:
+            self.run_q()
+            return self.res
+        else:
+            if self.simpler is None:
+                self.simpler = simplify(self.org.body[0])
+            return self.simpler
+
     def __getitem__(self, idx: Any) -> Iterable[Node]:
-        "Does __getitem__"
-        self.run_q()
-        return self.res[idx]
+        "Indexed access"
+        return self.cur[idx]
 
     def __len__(self) -> int:
-        self.run_q()
-        return len(self.res)
+        "Length of tree or last query result."
+        return len(self.cur)
 
     @property
     def q(self) -> 'Snack':
