@@ -1,14 +1,77 @@
 # yapf
 
 from _ast import *
+import ast
 from micropy.lang import callbytype  # type: ignore
+from typing import Any
+
+def fundef_desc(node: ast.FunctionDef) -> str:
+    "Does fundef_desc"
+    return '{}({})'.format(node.name, ', '.join(arg.arg for arg in node.args.args))
+
+def autoflat(nose: ast.AST) -> Any:
+    "Does autoflat"
+    pass
+
+
+# Express as code / for human
+desc = callbytype({
+    Str:
+    lambda s: (str, "'{}'".format(s.s)),
+    Add:
+    lambda _: ("+", '+'),
+    Sub:
+    lambda _: ('-', '-'),
+    Return:
+    lambda kids: ('return', 'return {}'),
+    FunctionDef:
+    lambda fdef: ('def', fundef_desc(fdef)),
+    arguments:
+    lambda args: ('()', '({})'.format(', '.join(
+        (arg.arg for ar in args.args)))),
+    arg: lambda arg: ('arg', arg.arg),
+    Module:
+    lambda mod: ('module', '?'),
+    BinOp: lambda bo: ('BO', (desc(bo.left), desc(bo.op), desc(bo.right))),  # typing: ifnore
+    Num: lambda num: (type(num.n), num.n),
+    Name: lambda name: ('symbol', name.id),
+    Expr: lambda exp: ('ex', desc(exp.value)[1]),  # RECUR!
+})
+
+def fundef_desc(node: ast.AST) -> str:
+    "Does fundef_desc"
+    return '{}({})'.format(node.name, ', '.join(arg.arg for arg in node.args.args))
+
+# Express as code / for human
+desc = callbytype({
+    Str:
+    lambda s: (str, "'{}'".format(s.s)),
+    Add:
+    lambda _: ("+", '+'),
+    Sub:
+    lambda _: ('-', '-'),
+    Return:
+    lambda kids: ('return', 'return {}'),
+    FunctionDef:
+    lambda fdef: ('def', fundef_desc(fdef)),
+    arguments:
+    lambda args: ('()', '({})'.format(', '.join(
+        (arg.arg for ar in args.args)))),
+    arg: lambda arg: ('arg', arg.arg),
+    Module:
+    lambda mod: ('module', '?'),
+    BinOp: lambda bo: ('BO', (desc(bo.left), desc(bo.op), desc(bo.right))),
+    Num: lambda num: (type(num.n), num.n),
+    Name: lambda name: ('symbol', name.id),
+    Expr: lambda exp: ('ex', desc(exp.value)[1]),  # RECUR!
+})
 
 # Unpack values / condition
 subnodes = callbytype({
     Str: lambda str_: ((str_.s, ), ()),
     Add: lambda add_: (('+', ), ()),
     Sub: lambda add_: (('-', ), ()),
-    Return: lambda ret: ((ret.value, ), (ret.value, )),
+    Return: lambda ret: subnodes(ret.value),
     FunctionDef: lambda fdef: (fdef.body, fdef.args.args),
     arguments: lambda args: (args.args, ()),
     Expr: lambda expr: ((expr.value, ), ()),
@@ -16,65 +79,4 @@ subnodes = callbytype({
     Num: lambda num: ((num.n, ), ()),
     Name: lambda name: ((name.id, ), ()),
     arg: lambda arg_: ((arg_.arg, ), ()),
-})
-
-# Codelike names
-codename = callbytype({
-    Str: lambda str_: 'str',
-    Add: lambda add_: '+',
-    Sub: lambda add_: '-',
-    Return: lambda ret: 'return',
-    FunctionDef: lambda fdef: 'def',
-    arguments: lambda args: '()',
-    Expr: lambda expr: 'XXX expr?',
-    BinOp: lambda bo: 'XXX binop?',
-    Num: lambda num: repr(num.n),
-    Name: lambda name: name.id,
-    arg: lambda arg_: repr(arg_.arg),
-})
-
-# Express as code / for human
-codename = callbytype({
-    Str: lambda s: "'{}'".format(s.s),
-    Add: lambda _: '+',
-    Sub: lambda _: '-',
-    Return: lambda kids: 'return',
-    FunctionDef: lambda fdef: f'def {fdef.name}',
-    arguments: lambda args: '(XXX)',
-    Module: lambda mod: 'XXX (module)',
-})
-
-# Express as code / for human
-desc = callbytype({
-    Str: ('str', lambda s: ("'{}'".format(s.s))),
-    Add: ('+', lambda _: '+'),
-    Sub: ('-', lambda _: '-'),
-    Return: ('return', lambda kids: 'return {}'.format(' '.join(
-        (kid.codeish for kid in kids)))),
-    FunctionDef:
-    ('def',
-     lambda n: '{}({})'.format(n.name,
-                               (n.name, ', '.join(el.desc
-                                                  for el in n.children)))),
-    arguments: ('()', lambda args: '({})'.format(', '.join(
-        (arg.codeish for ar in args)))),
-    Module: ('module', lambda mod: '?'),
-})
-
-# Express as code / for human
-desc = callbytype({
-    Str:
-    lambda s: "'{}'".format(s.s),
-    Add:
-    lambda _: '+',
-    Sub:
-    lambda _: '-',
-    Return:
-    lambda kids: 'return {}'.format('XXX'),
-    FunctionDef:
-    lambda n: '{}({})'.format(n.name, 'XXX'),
-    arguments:
-    lambda args: '({})'.format(', '.join((arg.codeish for ar in args))),
-    Module:
-    lambda mod: '?',
 })
