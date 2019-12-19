@@ -12,7 +12,6 @@ from abc import ABC, abstractmethod
 
 body = ops.attrgetter('body')
 hasbody = lambda o: hasattr(o, 'body')
-body_or_empty = funcy.iffy(hasbody, body, [])
 
 
 class _Node(object):
