@@ -12,6 +12,7 @@ class NodeDesc(object):
     spec: Any
     ident: str
     value: Any
+    full: ast.AST
 
     @property
     def children(self) -> Iterable:
@@ -29,23 +30,25 @@ def fundef_desc(node: ast.FunctionDef) -> str:
 
 odesc = callbytype({
     BinOp:
-    lambda bo: N(spec='bo',
+    lambda bo: N(full=bo,
+                 spec='bo',
                  ident='bo',
                  value=[odesc(bo.left),
                         odesc(bo.op),
                         odesc(bo.right)]),
     Expr:
-    lambda expr: N(spec='ex', ident='ex', value=odesc(expr.value)),
+    lambda expr: N(full=expr, spec='ex', ident='ex', value=odesc(expr.value)),
     Str:
-    lambda s: N(spec=str, ident='str', value=s.s),
+    lambda s: N(full=s, spec=str, ident='str', value=s.s),
     Num:
-    lambda num: N(spec=type(num.n), ident=str(num.n), value=num.n),
+    lambda num: N(full=num, spec=type(num.n), ident=str(num.n), value=num.n),
     Add:
-    lambda a: N(spec='op', ident='+', value='+'),
+    lambda a: N(full=a, spec='op', ident='+', value='+'),
     Return:
-    lambda ret: N(spec='return', ident='return', value=odesc(ret.value)),
+    lambda ret: N(
+        full=ret, spec='return', ident='return', value=odesc(ret.value)),
     Name:
-    lambda name: N(spec=name.id, ident=name.id, value=name.id)
+    lambda name: N(full=name, spec=name.id, ident=name.id, value=name.id)
 })
 
 # Express as code / for human
