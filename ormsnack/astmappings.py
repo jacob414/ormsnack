@@ -21,13 +21,6 @@ class NodeDesc(object):
 
 N = NodeDesc
 
-
-def fundef_desc(node: ast.FunctionDef) -> str:
-    "Textual description of an `ast.FunctionDef` node. "
-    return '{}({})'.format(node.name,
-                           ', '.join(arg.arg for arg in node.args.args))
-
-
 odesc = callbytype({
     BinOp:
     lambda bo: N(full=bo,
@@ -50,6 +43,13 @@ odesc = callbytype({
     Name:
     lambda name: N(full=name, spec=name.id, ident=name.id, value=name.id)
 })
+
+
+def fundef_desc(node: ast.FunctionDef) -> str:
+    "Textual description of an `ast.FunctionDef` node. "
+    return '{}({})'.format(node.name,
+                           ', '.join(arg.arg for arg in node.args.args))
+
 
 # Express as code / for human
 desc = callbytype({
