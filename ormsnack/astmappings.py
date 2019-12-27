@@ -3,80 +3,82 @@
 from _ast import *
 import ast
 from micropy.lang import callbytype  # type: ignore
-from typing import Any
-
-def fundef_desc(node: ast.FunctionDef) -> str:
-    "Does fundef_desc"
-    return '{}({})'.format(node.name, ', '.join(arg.arg for arg in node.args.args))
-
-def autoflat(nose: ast.AST) -> Any:
-    "Does autoflat"
-    pass
+from typing import Any, Iterable
+from dataclasses import dataclass
+import funcy
 
 
-# Express as code / for human
+@dataclass
+class NodeDesc(object):
+    full: ast.AST
+    spec: Any
+    ident: str
+    value: Any
+    cond: Any = None
+
+    @property
+    def children(self) -> Iterable:
+        if funcy.is_seqcoll(self.value):
+            return self.value
+        else:
+            return []
+
+
+N = NodeDesc
+
+
+def desc_many(nodes: Iterable[ast.AST]) -> Iterable[NodeDesc]:
+    "Creates NodeDesc objects from an iterable of ast nodes."
+    return [desc(node) for node in nodes]
+
+
 desc = callbytype({
-    Str:
-    lambda s: (str, "'{}'".format(s.s)),
-    Add:
-    lambda _: ("+", '+'),
-    Sub:
-    lambda _: ('-', '-'),
-    Return:
-    lambda kids: ('return', 'return {}'),
+    # hm? starting out by just descending into it..
+    BinOp:
+    lambda bo: desc_many([bo.left, bo.op, bo.right]),
+    Expr:
+    lambda expr: desc(expr.value),
+    If:
+    lambda iff: N(full=iff,
+                  spec='if',
+                  ident='if',
+                  value=desc_many(iff.body),
+                  cond=desc(iff.test)),
+    Call:
+    lambda call: N(full=call,
+                   spec=f'call/{call.func.id}',
+                   ident=call.func.id,
+                   value=desc(call.func)),
     FunctionDef:
-    lambda fdef: ('def', fundef_desc(fdef)),
+    lambda fdef: N(full=fdef,
+                   spec=f'def',
+                   ident=fdef.name,
+                   value=desc_many(fdef.body),
+                   cond=desc(fdef.args)),
     arguments:
-    lambda args: ('()', '({})'.format(', '.join(
-        (arg.arg for ar in args.args)))),
-    arg: lambda arg: ('arg', arg.arg),
-    Module:
-    lambda mod: ('module', '?'),
-    BinOp: lambda bo: ('BO', (desc(bo.left), desc(bo.op), desc(bo.right))),  # typing: ifnore
-    Num: lambda num: (type(num.n), num.n),
-    Name: lambda name: ('symbol', name.id),
-    Expr: lambda exp: ('ex', desc(exp.value)[1]),  # RECUR!
-})
-
-def fundef_desc(node: ast.AST) -> str:
-    "Does fundef_desc"
-    return '{}({})'.format(node.name, ', '.join(arg.arg for arg in node.args.args))
-
-# Express as code / for human
-desc = callbytype({
+    lambda args:
+    N(full=args, spec='args', ident='args', value=desc_many(args.args)),
+    arg:
+    lambda arg: N(
+        full=arg,
+        spec='arg',
+        ident=arg.arg,
+        value=arg.arg,
+    ),
+    Compare:
+    lambda cmp_: N(full=cmp_,
+                   spec='cmp',
+                   ident='cmp',
+                   value=desc_many([cmp_.left, *cmp_.comparators])),
     Str:
-    lambda s: (str, "'{}'".format(s.s)),
+    lambda s: N(full=s, spec=str, ident=s.s, value=s.s),
+    Num:
+    lambda num: N(full=num, spec=type(num.n), ident=str(num.n), value=num.n),
     Add:
-    lambda _: ("+", '+'),
-    Sub:
-    lambda _: ('-', '-'),
+    lambda a: N(full=a, spec='op', ident='+', value='+'),
     Return:
-    lambda kids: ('return', 'return {}'),
-    FunctionDef:
-    lambda fdef: ('def', fundef_desc(fdef)),
-    arguments:
-    lambda args: ('()', '({})'.format(', '.join(
-        (arg.arg for ar in args.args)))),
-    arg: lambda arg: ('arg', arg.arg),
-    Module:
-    lambda mod: ('module', '?'),
-    BinOp: lambda bo: ('BO', (desc(bo.left), desc(bo.op), desc(bo.right))),
-    Num: lambda num: (type(num.n), num.n),
-    Name: lambda name: ('symbol', name.id),
-    Expr: lambda exp: ('ex', desc(exp.value)[1]),  # RECUR!
-})
-
-# Unpack values / condition
-subnodes = callbytype({
-    Str: lambda str_: ((str_.s, ), ()),
-    Add: lambda add_: (('+', ), ()),
-    Sub: lambda add_: (('-', ), ()),
-    Return: lambda ret: subnodes(ret.value),
-    FunctionDef: lambda fdef: (fdef.body, fdef.args.args),
-    arguments: lambda args: (args.args, ()),
-    Expr: lambda expr: ((expr.value, ), ()),
-    BinOp: lambda bo: ((bo.left, bo.op, bo.right), ()),
-    Num: lambda num: ((num.n, ), ()),
-    Name: lambda name: ((name.id, ), ()),
-    arg: lambda arg_: ((arg_.arg, ), ()),
+    lambda ret:
+    N(full=ret, spec='return', ident='return', value=desc(ret.value)),
+    Name:
+    lambda name: N(full=name, spec=name.id, ident=name.id, value=name.id)
 })

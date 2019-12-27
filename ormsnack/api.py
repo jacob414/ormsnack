@@ -12,7 +12,6 @@ from abc import ABC, abstractmethod
 
 body = ops.attrgetter('body')
 hasbody = lambda o: hasattr(o, 'body')
-body_or_empty = funcy.iffy(hasbody, body, [])
 
 
 class _Node(object):
@@ -55,6 +54,9 @@ class _Node(object):
 class Branch(_Node, ABC):
     "Marker for branching nodes"
 
+    def simplify(self, children):
+        self.body = simpany(children)
+
     def cond_hook(self, cond) -> None:
         "Does role_hook"
         self.cond = simpany(cond)
@@ -71,7 +73,7 @@ class Branch(_Node, ABC):
 
     @property
     def children(self) -> List[_Node]:
-        return self.elements
+        return self.body
 
     @property
     def simplified(self) -> Optional[_Node]:
@@ -128,53 +130,21 @@ class Node(_Node):
 
     .desc = ??? description?
     """
-    def __init__(self, full, body, cond):
+    def __init__(self, full, desc):
         self._value = f'VALUE? {full}'
         self.full = full
+        self.desc = desc
         try:
             self.ident = full.name
         except AttributeError:
             self.ident = full.__class__.__name__
-        self.cond_hook(cond)
 
-    def cond_hook(self, cond):
-        pass
-
-    @property
-    def children(self) -> Union[List[_Node], List]:
-        "Does children"
-        return []
+    def __str__(self) -> str:
+        return f'<{self.spec}:{self.spec}/{self.ident}>'
 
     @property
     def spec(self) -> str:
-        "Does spec"
-        try:
-            return astmappings.desc(self.full.value)
-        except KeyError:
-            # XXX Breaks Zen
-            return self.full.__class__.__name__.lower()
-
-    @property
-    def codeish(self) -> str:
-        "Does express"
-        return ' '.join(
-            (str(self.desc), *(el.codeish for el in self.children)))
-
-    def __str__(self):
-        return f'<{self.__class__.__name__}:{self.codeish}>'
-
-    def __repr__(self):
-        return str(self)
-
-    def rebuild(self) -> ast.AST:
-        "Recreates tree."
-        raise NotImplementedError('Node.rebuild(): TBD')
-
-    def eval(self, globals_: Mapping, ns: Mapping, **env: Any) -> None:
-        "Does eval"
-        # exec(compile(self.rebuild(), '?', 'single'), globals_, ns)
-        # return ns
-        raise NotImplementedError('Node.eval(): TBD')
+        return self.desc.spec
 
 
 class Statement(Node, Branch):
@@ -182,30 +152,20 @@ class Statement(Node, Branch):
     exactly ONE `Exper` in it.
 
     """
-    def __init__(self, full, body, cond) -> None:
-        super().__init__(full, body, cond)
-        # if type(full) == ast.Return:
-        # import ipdb; ipdb.set_trace(); pass
-
-        self._value = [self]
-        self.elements = body
-        desc, codeme = astmappings.desc(full)
-        self.name = getattr(full, 'name', desc)
-        self.desc = desc
-        self.codeme = codeme
-        self.cnt = simpany(body)
-        self.cond = simpany(cond)
-        # self.cond = [astmappings.desc(part) for part in cond]
+    def __init__(self, full, desc) -> None:
+        super().__init__(full, desc)
+        self.simplify(desc.children)
+        nodes = [node.full for node in desc.value]
+        # self.elements = [astmappings.desc(node.full) for node in desc.value]
+        self.name = desc.ident
 
     @property
     def codeish(self):
-        # return astmappings.desc(self.full).format(', '.join(
-        # el.value for el in self.cond)) + ':'
-        return self.codeme
+        return f'<Statement:{self.desc.spec}>'
 
     @property
     def children(self):
-        return self.cnt
+        return self.elements
 
     @property
     def spec(self) -> str:
@@ -213,41 +173,39 @@ class Statement(Node, Branch):
 
     @property
     def primval(self) -> Any:
-        return [child.value for child in self.children]
+        return [desc.value for desc in self.desc.children]
 
 
 class Block(Node, Branch):
     """
     ONE `Statement` with arbitrary hierarchy of child Nodes.
     """
-    def __init__(self, full, body, cond):
-        super().__init__(full, body, cond)
+    def __init__(self, full, desc):
+        super().__init__(full, desc)
 
-        self.body = simpany(body)
-        self.cond = simpany(cond)
+        self.simplify(desc.children)
 
         # Uughh bypass `simpany()` infinite recursion otherwise. XXX
-        self.stmt = Statement(full, body, cond)
+        self.stmt = Statement(full, desc.cond)
 
-        self.cnt = self._value = self.body
+        self._value = desc.value
 
     @property
     def values(self):
         return (self.stmt, ) + tuple(
-            funcy.flatten(value._value for value in self.body))
+            funcy.flatten(value.value for value in self.desc.value))
 
     def __getitem__(self, idx: Any) -> Iterable[Node]:
         "Does __getitem__"
-        return self.body[idx]
+        return self.children[idx]
 
     def __len__(self) -> int:
         return len(self.body)
 
     @property
-    @property
     def spec(self) -> str:
         "Does spec"
-        return self.codeish
+        return self.desc.spec
 
     def codeish(self) -> str:
         "Does codeish"
@@ -255,8 +213,8 @@ class Block(Node, Branch):
 
 
 class Symbol(Node, Leaf):
-    def __init__(self, full, body, cond):
-        super().__init__(full, body, cond)
+    def __init__(self, full, desc):
+        super().__init__(full, desc)
         self.desc = self.name = self._value = body
 
     @property
@@ -268,12 +226,11 @@ class Symbol(Node, Leaf):
         return self._value
 
 
-class Expr(Node, Leaf):
-    def __init__(self, full, body, cond):
-        super().__init__(full, body, cond)
-        self.elements = self._value = simpany(body)
-        desc, codeme = astmappings.desc(full)
-        self.desc, self.codeme = desc, codeme
+class Expr(Node, Branch):
+    def __init__(self, full, desc):
+        super().__init__(full, desc)
+        self.simplify(desc.children)
+        # self.elements = self._value = simpany(desc.full)
 
     @property
     def values(self):
@@ -296,14 +253,14 @@ class Expr(Node, Leaf):
     @property
     def spec(self) -> str:
         "Does spec"
-        return astmappings.desc(self.full.value)[0]
+        return self.desc.spec
 
 
 class Literal(Node, Leaf):
-    def __init__(self, full, body, cond):
-        super().__init__(full, body, cond)
-        self._value = self.name = body
-        self.desc = body
+    def __init__(self, full, desc):
+        super().__init__(full, desc)
+        self._value = self.name = desc.value
+        # self.desc = desc.value
 
     @property
     def primval(self) -> Any:
@@ -316,28 +273,19 @@ class Literal(Node, Leaf):
 
 
 # Unpack values
-simplifiers = lang.callbytype({
-    _ast.Return:
-    lambda retrn: (Statement, retrn.value, None),
-    _ast.BinOp:
-    lambda binop: (Expr, (binop.left, binop.op, binop.right), None),
-    _ast.Name:
-    lambda name: (Symbol, name.id, None),
-    _ast.Str:
-    lambda str_: (Literal, str_.s, None),  # ok
-    _ast.Num:
-    lambda num: (Literal, num.n, None),
-    _ast.FunctionDef:
-    lambda fnd: (Block, fnd.body, fnd.args),
-    _ast.Expr:
-    lambda exp: (Expr, exp.value, None),
-    _ast.arguments:
-    lambda args: (Expr, args.args, None),
-    _ast.arg:
-    lambda arg: (Symbol, arg.arg, None),
-    _ast.Add:
-    lambda add: (Symbol, '+', None),
-})
+simplifiers = {
+    _ast.Return: Statement,
+    _ast.BinOp: Expr,
+    _ast.Name: Symbol,
+    _ast.Str: Literal,
+    _ast.Num: Literal,
+    _ast.FunctionDef: Block,
+    _ast.Expr: Expr,
+    _ast.arguments: Expr,
+    _ast.arg: Symbol,
+    _ast.Add: Symbol,
+    _ast.If: Block,
+}
 
 NodeOrIter = Union[ast.AST, Iterable, Node]
 
@@ -349,26 +297,17 @@ def simpany(node_or_many: NodeOrIter) -> Union[_Node, Iterable[_Node]]:
     elif isinstance(node_or_many, Node):
         return node_or_many
     elif funcy.is_seqcoll(node_or_many):
-        return [simplify(node) for node in node_or_many]
+        return [simplify(desc.full) for desc in node_or_many]
     raise TypeError(f'Unclassifiable node ({node_or_many!r})')
 
 
 def simplify(node: Union[ast.AST, Iterable]) -> _Node:
     "Creates a simplified ormsnack Node object from any ast object"
 
-    Kind, _, _ = simplifiers(node)
-    subnodes = astmappings.subnodes(node)
+    Kind = simplifiers[type(node)]
+    desc = astmappings.desc(node)
+    return Kind(node, desc)
 
-    return Kind(node, *subnodes)
-
-
-childhand = {
-    list: funcy.identity,
-    _ast.BinOp: lambda n: (n.value.left, n.value.right),
-    _ast.Str: lambda n: n.value.s,
-    _ast.Expr: lambda n: n.value,
-    _ast.Return: lambda n: n.value
-}
 
 MatchFn = Callable[[_Node], bool]
 
