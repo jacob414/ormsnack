@@ -2,6 +2,7 @@
 
 import ast
 import inspect
+from pprint import pformat
 from typing import Any, Mapping
 import types
 
@@ -14,9 +15,18 @@ def getast(obj: Any, name: str = None) -> Any:
 
     """
     if name is None:
-        name = obj.__name__
-    body = ast.parse(inspect.getsource(obj)).body
-    return ast.Module(body=[next(node for node in body if node.name == name)])
+        name = getattr(obj, '__name__', '?')
+    try:
+        source = inspect.getsource(obj)
+    except TypeError:
+        # Try to handle an object that inspect.getsource() couldn't handle.
+        # XXX first sketch, ind of weak, let's see how long it holds..
+        source = pformat(obj)
+        return ast.Module(body=ast.parse(source).body)
+
+    return ast.Module(body=[
+        next(node for node in ast.parse(source).body if node.name == name)
+    ])
 
 
 def compile_ast(tree_: ast.AST, filename: str = None) -> types.CodeType:

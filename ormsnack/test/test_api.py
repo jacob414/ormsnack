@@ -16,7 +16,6 @@ def foo(x: Any) -> None:
     2
     return x + 1
 
-
 @pytest.fixture
 def Fob() -> api.Snack:
     "Does Fn"
