@@ -23,6 +23,10 @@ class NodeDesc(object):
         else:
             return []
 
+    def __hash__(self):
+        return hash(self.full) + hash(self.value) + hash(self.spec) + hash(
+            self.ident)
+
 
 N = NodeDesc
 
