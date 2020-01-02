@@ -93,7 +93,7 @@ class Leaf(_Node, ABC):
     def value(self) -> Any:
         """Value property - for leaf nodes that means the Python literal for
         literals, the name as a String for Symbols."""
-        return self._value[0]
+        return self.desc.value
 
     @property
     def primval(self) -> Any:
@@ -159,6 +159,9 @@ class Statement(Node, Branch):
         # self.elements = [astmappings.desc(node.full) for node in desc.value]
         self.name = desc.ident
 
+    def __str__(self) -> str:
+        return f'<Statement:{self.spec}/{self.ident}>'
+
     @property
     def codeish(self):
         return f'<Statement:{self.desc.spec}>'
@@ -169,7 +172,7 @@ class Statement(Node, Branch):
 
     @property
     def spec(self) -> str:
-        return self.name
+        return self.desc.spec
 
     @property
     def primval(self) -> Any:
@@ -190,10 +193,13 @@ class Block(Node, Branch):
 
         self._value = desc.value
 
+    def __str__(self) -> str:
+        return f'<Block:{self.ident}{self.stmt.desc.ident}>'
+
     @property
     def values(self):
-        return (self.stmt, ) + tuple(
-            funcy.flatten(value.value for value in self.desc.value))
+        return [self.stmt] + list(
+            funcy.flatten(value.value for value in self.children))
 
     def __getitem__(self, idx: Any) -> Iterable[Node]:
         "Does __getitem__"
@@ -348,9 +354,10 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
         self.logically(named(pattern, rx.match), True)
         return self
 
-    def run_q(self):
+    def run_q(self, top: Node) -> Iterable:
         "Perform a query on AST tree."
-        self.res = tuple(node for node in self.rep.values if self(node))
+        all_ = [top, *top.children]
+        self.res = [node for node in all_ if self(node)]
         return self
 
 
@@ -371,7 +378,8 @@ class Snack(ASTQuery):
     def cur(self) -> None:
         "Does run"
         if len(self.ops) > 0:
-            self.run_q()
+            top = self.rep
+            self.run_q(top)
             return self.res
         else:
             if self.simpler is None:
@@ -380,7 +388,8 @@ class Snack(ASTQuery):
 
     def __getitem__(self, idx: Any) -> Iterable[Node]:
         "Indexed access"
-        return self.cur[idx]
+        now = self.cur
+        return now[idx]
 
     def __len__(self) -> int:
         "Length of tree or last query result."

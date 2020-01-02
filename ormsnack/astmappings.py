@@ -36,8 +36,7 @@ def desc_many(nodes: Iterable[ast.AST]) -> Iterable[NodeDesc]:
     return [desc(node) for node in nodes]
 
 
-desc = callbytype({
-    # hm? starting out by just descending into it..
+desc = callbytype({  # hm? starting out by just descending into it..
     BinOp:
     lambda bo: desc_many([bo.left, bo.op, bo.right]),
     Expr:
@@ -60,8 +59,10 @@ desc = callbytype({
                    value=desc_many(fdef.body),
                    cond=desc(fdef.args)),
     arguments:
-    lambda args:
-    N(full=args, spec='args', ident='args', value=desc_many(args.args)),
+    lambda args: N(full=args,
+                   spec='args',
+                   ident='({})'.format(','.join(arg.arg for arg in args.args)),
+                   value=desc_many(args.args)),
     arg:
     lambda arg: N(
         full=arg,

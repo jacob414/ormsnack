@@ -38,3 +38,12 @@ def test_node_base_props(Fob, index, spec, primval) -> None:
     "Should snacka_codeish"
     node = Fob[index]
     assert (node.spec, node.primval) == (spec, primval)
+
+def test_bug(Fob) -> None:
+    "Should bug"
+    node = None
+    for node in Fob << 'foo':
+        node = node
+
+    found = [node for node in Fob << 'foo']
+    assert [node.ident for node in found] == ['foo']

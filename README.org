@@ -30,6 +30,6 @@ AST, e.g. like this:
 >>> snack = api.snacka(foo)
 >>> for node in snack << 'foo':
 ...     print(str(node))
-<Statement:foo(x)>
+<Block:foo(x)>
 >>>
 #+END_SRC
