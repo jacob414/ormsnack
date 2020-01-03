@@ -14,8 +14,8 @@
 #+END_SRC
 
 The more high-level idea is to simplify AST nodes into a few
-categories (Right now there's `Statement`, `Block`, `Sym`,
-`Literal`). A few might follow. A top-level function will take any
+categories (Right now there's =Statement=, =Block=, =Symbol= and
+=Literal=). A few might follow. A top-level function will take any
 live object, transform to this simplified AST and use the Query DLS
 developed seperately in [[https://github.com/JacobOscarson/micropy][micropy]].
 
