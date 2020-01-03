@@ -14,7 +14,7 @@ body = ops.attrgetter('body')
 hasbody = lambda o: hasattr(o, 'body')
 
 
-class _Node(object):
+class _Node(ABC):
     """The top-level abstraction for Node's. Beware that at the top of the
     module an empty class that is later overridden by one with the
     same name is declared. This is to make the typing hints more
@@ -29,26 +29,31 @@ class _Node(object):
     ident: str = '?'
 
     @property
-    def children(self) -> List['_Node']:
-        "Does children"
-        return self._simpler
-
-    @property
     @abstractmethod
     def simplified(self) -> Optional['_Node']:
         "Should return the simplified form of the ast.AST tree"
-        pass
+        raise NotImplementedError(".simplified property not overridden")
 
     @property
     @abstractmethod
     def codeish(self) -> str:
         "Should return the simplified form of the ast.AST tree"
-        pass
+        raise NotImplementedError(".codeish property not overridden")
 
     @property
     @abstractmethod
     def primval(self) -> Any:
-        pass
+        raise NotImplementedError(".primval property not overridden")
+
+    @property
+    @abstractmethod
+    def value(self) -> Any:
+        raise NotImplementedError(".value property not overridden")
+
+    @property
+    @abstractmethod
+    def children(self) -> Iterable:
+        raise NotImplementedError(".value property not overridden")
 
 
 class Branch(_Node, ABC):
@@ -57,14 +62,10 @@ class Branch(_Node, ABC):
     def simplify(self, children):
         self.body = simpany(children)
 
-    def cond_hook(self, cond) -> None:
-        "Does role_hook"
-        self.cond = simpany(cond)
-
     @property
     def value(self) -> Any:
         "Does value"
-        return self._value
+        return [child.value for child in self.body]
 
     @property
     def primval(self) -> Any:
@@ -113,6 +114,10 @@ class Leaf(_Node, ABC):
         self.simpler = simplify(self.org.body[0])  # type: ignore
 
         return self.simpler
+
+    @property
+    def children(self) -> Iterable:
+        return []  # pragma: nocov   (just a safeguard)
 
 
 isleaf = funcy.isa(Branch)
@@ -236,7 +241,6 @@ class Expr(Node, Branch):
     def __init__(self, full, desc):
         super().__init__(full, desc)
         self.simplify(desc.children)
-        # self.elements = self._value = simpany(desc.full)
 
     @property
     def values(self):
