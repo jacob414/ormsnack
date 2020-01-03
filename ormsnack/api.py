@@ -30,12 +30,6 @@ class _Node(ABC):
 
     @property
     @abstractmethod
-    def simplified(self) -> Optional['_Node']:
-        "Should return the simplified form of the ast.AST tree"
-        raise NotImplementedError(".simplified property not overridden")
-
-    @property
-    @abstractmethod
     def codeish(self) -> str:
         "Should return the simplified form of the ast.AST tree"
         raise NotImplementedError(".codeish property not overridden")
@@ -76,13 +70,6 @@ class Branch(_Node, ABC):
     def children(self) -> List[_Node]:
         return self.body
 
-    @property
-    def simplified(self) -> Optional[_Node]:
-        "Does simplified"
-        if self.simpler is not None:
-            self.simpler = simplify(self.org.body[0])  # type: ignore
-        return self.simpler
-
 
 isbranch = funcy.isa(Branch)
 
@@ -98,22 +85,11 @@ class Leaf(_Node, ABC):
 
     @property
     def primval(self) -> Any:
-        "Does primval"
+        """Primitive value property - for leaf nodes thats the Python literal
+        of the AST node.
+
+        """
         return self.value
-
-    @property
-    def simplified(self) -> Optional[_Node]:
-        "Does simplify"
-        self.simpler = simplify(self.org.body[0])  # type: ignore
-
-        return self.simpler
-
-    @property
-    def simplified(self) -> Optional[_Node]:
-        "Does simplify"
-        self.simpler = simplify(self.org.body[0])  # type: ignore
-
-        return self.simpler
 
     @property
     def children(self) -> Iterable:
@@ -136,13 +112,10 @@ class Node(_Node):
     .desc = ??? description?
     """
     def __init__(self, full, desc):
-        self._value = f'VALUE? {full}'
+        self._value = desc.value
         self.full = full
         self.desc = desc
-        try:
-            self.ident = full.name
-        except AttributeError:
-            self.ident = full.__class__.__name__
+        self.ident = desc.ident
 
     def __str__(self) -> str:
         return f'<{self.spec}:{self.spec}/{self.ident}>'
@@ -201,11 +174,6 @@ class Block(Node, Branch):
     def __str__(self) -> str:
         return f'<Block:{self.ident}{self.stmt.desc.ident}>'
 
-    @property
-    def values(self):
-        return [self.stmt] + list(
-            funcy.flatten(value.value for value in self.children))
-
     def __getitem__(self, idx: Any) -> Iterable[Node]:
         "Does __getitem__"
         return self.children[idx]
@@ -226,7 +194,6 @@ class Block(Node, Branch):
 class Symbol(Node, Leaf):
     def __init__(self, full, desc):
         super().__init__(full, desc)
-        self.desc = self.name = self._value = body
 
     @property
     def codeish(self) -> str:
@@ -241,10 +208,6 @@ class Expr(Node, Branch):
     def __init__(self, full, desc):
         super().__init__(full, desc)
         self.simplify(desc.children)
-
-    @property
-    def values(self):
-        return [el._value for el in self.elements]
 
     @property
     def primval(self) -> Any:
@@ -367,7 +330,7 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
 
 class Snack(ASTQuery):
     def __init__(self, tr):
-        lang.LogicPiping.__init__(self, kind='pipe')
+        super().__init__(snack=self)
         self.org = tr
         self.simpler = None
 

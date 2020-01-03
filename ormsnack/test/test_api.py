@@ -29,21 +29,18 @@ def test_snacka(Fob) -> None:
         type(foo.__code__)  # yapf: ignore
 
 @fixture.params(
-    "index, spec, primval",
-    (0, str, "Docstring"),
-    (1, int, 1),
-    (-1, 'return', ['x', '+', 1]),
+    "index, spec, value, primval",
+    (0, str, "Docstring", "Docstring"),
+    (1, int, 1, 1),
+    (-1, 'return', ['x', '+', 1], ['x', '+', 1]),
 )
-def test_node_base_props(Fob, index, spec, primval) -> None:
+def test_node_base_props(Fob, index, spec, value, primval) -> None:
     "Should snacka_codeish"
     node = Fob[index]
-    assert (node.spec, node.primval) == (spec, primval)
+    assert (node.spec, node.value, node.primval) == (spec, value, primval)
 
 def test_bug(Fob) -> None:
     "Should bug"
     node = None
-    for node in Fob << 'foo':
-        node = node
-
     found = [node for node in Fob << 'foo']
     assert [node.ident for node in found] == ['foo']
