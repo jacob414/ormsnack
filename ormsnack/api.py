@@ -235,6 +235,10 @@ class Literal(Node, Leaf):
         self._value = self.name = desc.value
         # self.desc = desc.value
 
+    def __str__(self) -> str:
+        "Return string representation of this Node"
+        return f'<Literal:{self.primval!r}:{self.spec.__name__}>'
+
     @property
     def primval(self) -> Any:
         return self._value

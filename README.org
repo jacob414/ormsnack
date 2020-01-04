@@ -20,7 +20,7 @@ live object, transform to this simplified AST and use the Query DLS
 developed seperately in [[https://github.com/JacobOscarson/micropy][micropy]].
 
 You should be able to use the DSL to query for nodes in the simplified
-AST, e.g. like this:
+AST, e.g. like this using strict equal matching:
 
 #+BEGIN_SRC python
 >>> from ormsnack import api
@@ -29,7 +29,22 @@ AST, e.g. like this:
 ...     return x + 23
 >>> snack = api.snacka(foo)
 >>> for node in snack << 'foo':
-...     print(str(node))
+...     print(node)
 <Block:foo(x)>
+>>>
+#+END_SRC
+
+Or like this using regexp matching:
+
+#+BEGIN_SRC python
+>>> from ormsnack import api
+>>> \
+... def foo(x: int) -> int:
+...      "Docstring"
+...      return x + 23
+>>> snack = api.snacka(foo)
+>>> for node in snack @ 'Docstring':
+...     print(node)
+<Literal:'Docstring':str>
 >>>
 #+END_SRC
