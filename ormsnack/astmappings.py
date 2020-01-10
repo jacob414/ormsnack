@@ -72,7 +72,6 @@ def decender(nodes: Iterable[ast.AST]) -> Callable[[], Iterable[NodeDesc]]:
     "Creates NodeDesc objects from an iterable of ast nodes."
 
     def decend(_: ast.AST) -> Iterable[NodeDesc]:
-        print(nodes)
         return [desc(node) for node in nodes]
 
     return decend
