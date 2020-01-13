@@ -18,7 +18,6 @@ def foo(x):
     }, ''),
     (foo, ''),
 )
-@pytest.mark.wbox
 def test_getast_sources(thing, x) -> None:
     "Python objects tree.getast() should be able to return an AST for."
     # XXX not supported:
