@@ -124,7 +124,8 @@ desc = callbytype({  # hm? starting out by just descending into it..
         full=arg,
         spec='arg',
         ident=arg.arg,
-        value=arg.arg,
+        get=attrgetter('arg'),
+        set=attrsetter('arg'),
     ),
     Compare:
     lambda cmp_: N(full=cmp_,
@@ -142,11 +143,8 @@ desc = callbytype({  # hm? starting out by just descending into it..
                   get=attrgetter('n'),
                   set=attrsetter('n')),
     Add:
-    lambda a: N(full=a,
-                spec='op',
-                ident='+',
-                get=lambda: '+',
-                set=lambda v: setattr(a, 'op', v)),
+    lambda a:
+    N(full=a, spec='op', ident='+', get=lambda _: '+', set=attrsetter('op')),
     Return:
     lambda ret: N(full=ret,
                   spec='return',
@@ -157,6 +155,6 @@ desc = callbytype({  # hm? starting out by just descending into it..
     lambda name: N(full=name,
                    spec=name.id,
                    ident=name.id,
-                   get=lambda: name.id,
-                   set=lambda v: setattr(name, 'id', v))
+                   get=attrgetter('id'),
+                   set=attrsetter('id'))
 })
