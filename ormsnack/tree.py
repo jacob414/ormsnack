@@ -3,11 +3,12 @@
 import ast
 import inspect
 from pprint import pformat
-from typing import Any, Mapping
+from typing import Any, Mapping, Optional, Union
 import types
+from functools import singledispatch
 
 
-def getast(obj: Any, name: str = None) -> Any:
+def getast(obj: Any, name: str = None) -> ast.Module:
     """Grab AST of `obj`. (Uses inspect.getsource() behind the scenes).
 
     Highly simplified version of what's can be found in other
@@ -25,8 +26,15 @@ def getast(obj: Any, name: str = None) -> Any:
         return ast.Module(body=ast.parse(source).body)
 
     return ast.Module(body=[
-        next(node for node in ast.parse(source).body if node.name == name)
+        next(node for node in ast.parse(source).body
+             if getattr(node, 'name', '') == name)
     ])
+
+
+def assign(name, exp) -> ast.AST:
+    "Does assignp"
+    node = ast.Assign(targets=[ast.Name(id=name, ctx=ast.Store())], value=exp)
+    return ast.fix_missing_locations(node)
 
 
 def compile_ast(tree_: ast.AST, filename: str = None) -> types.CodeType:
@@ -36,14 +44,22 @@ def compile_ast(tree_: ast.AST, filename: str = None) -> types.CodeType:
     return compile(tree_, filename, 'exec')
 
 
-def exec_all(recompiled: types.CodeType) -> Mapping[str, Any]:
+def run_all(recompiled: types.CodeType) -> Mapping[str, Any]:
     "Does exec"
     ns: Mapping[str, Any] = {}
     exec(recompiled, globals(), ns)
     return ns
 
 
-def exec_sym(recompiled: types.CodeType, symname: str) -> Any:
-    "Does exec_sym"
-    full = exec_all(recompiled)
+def run_sym(recompiled: types.CodeType, symname: str) -> Any:
+    "Does run_sym"
+    full = run_all(recompiled)
     return full[symname]
+
+
+def run_ast(topnode: ast.AST,
+            name: Optional[str] = None) -> Union[Any, Mapping[str, Any]]:
+    "Full roundtrip execute from an AST node as parameter"
+    code = compile_ast(topnode)
+    full = run_all(code)
+    return full[name] if name else full
