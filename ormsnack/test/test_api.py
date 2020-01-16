@@ -16,10 +16,16 @@ def foo(x: Any) -> None:
     2
     return x + 1
 
+
+def snack() -> api.Snack:
+    "Does snack"
+    return api.snacka(foo)
+
+
 @pytest.fixture
 def Fob() -> api.Snack:
     "Does Fn"
-    return api.snacka(foo)
+    return snack()
 
 
 def test_snacka(Fob) -> None:
@@ -27,6 +33,7 @@ def test_snacka(Fob) -> None:
     assert \
         type(compile(codegen.to_source(Fob.org), '', 'single')) == \
         type(foo.__code__)  # yapf: ignore
+
 
 @fixture.params(
     "index, spec, value, primval",
@@ -39,8 +46,13 @@ def test_node_base_props(Fob, index, spec, value, primval) -> None:
     node = Fob[index]
     assert (node.spec, node.value, node.primval) == (spec, value, primval)
 
-def test_bug(Fob) -> None:
-    "Should bug"
-    node = None
-    found = [node for node in Fob << 'foo']
-    assert [node.ident for node in found] == ['foo']
+
+@fixture.params(
+    "query, idents",
+    ((snack() << 'foo'), ['foo']),
+    ((snack() @ 'fo.$'), ['foo']),
+)
+def test_queries(query, idents) -> None:
+    "Should find known nodes "
+    found = [node for node in query]
+    assert [node.ident for node in found] == idents
