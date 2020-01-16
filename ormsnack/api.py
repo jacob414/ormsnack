@@ -1,6 +1,6 @@
 # yapf
 from ormsnack import tree
-from typing import Any, List, Iterable, Mapping, Callable, Union, Optional
+from typing import Any, List, Iterable, Callable, Union, Optional
 import funcy  # type: ignore
 from micropy import lang  # type: ignore
 import _ast
@@ -51,10 +51,17 @@ class _Node(ABC):
 
 
 class Branch(_Node, ABC):
-    "Marker for branching nodes"
+    "Marker/common behaviour for branching nodes"
 
     def simplify(self, children):
         self.body = simpany(children)
+
+    def __getitem__(self, idx: Any) -> Iterable[_Node]:
+        "Should return child node(s) from this branch specified by `idx`."
+        return self.children[idx]
+
+    def __len__(self) -> int:
+        return len(self.body)
 
     @property
     def value(self) -> Any:
@@ -133,8 +140,6 @@ class Statement(Node, Branch):
     def __init__(self, full, desc) -> None:
         super().__init__(full, desc)
         self.simplify(desc.children)
-        nodes = [node.full for node in desc.value]
-        # self.elements = [astmappings.desc(node.full) for node in desc.value]
         self.name = desc.ident
 
     def __str__(self) -> str:
@@ -173,13 +178,6 @@ class Block(Node, Branch):
 
     def __str__(self) -> str:
         return f'<Block:{self.ident}{self.stmt.desc.ident}>'
-
-    def __getitem__(self, idx: Any) -> Iterable[Node]:
-        "Does __getitem__"
-        return self.children[idx]
-
-    def __len__(self) -> int:
-        return len(self.body)
 
     @property
     def spec(self) -> str:
@@ -342,7 +340,7 @@ class Snack(ASTQuery):
     def rep(self):
         "Simplify tree"
         if self.simpler is None:
-            self.simpler = simplify(self.org.body[0])
+            self.simpler = simplify(self.org)
         return self.simpler
 
     @property
@@ -353,9 +351,7 @@ class Snack(ASTQuery):
             self.run_q(top)
             return self.res
         else:
-            if self.simpler is None:
-                self.simpler = simplify(self.org.body[0])
-            return self.simpler
+            return self.rep
 
     def __getitem__(self, idx: Any) -> Iterable[Node]:
         "Indexed access"

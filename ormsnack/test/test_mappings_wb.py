@@ -20,7 +20,7 @@ tree = getast(foo)
 
 def descnodes() -> list:
     "Does descnodes"
-    return M.desc(tree.body[0])
+    return [M.desc(node) for node in tree.body]
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def node_types() -> list:
 @pytest.fixture
 def nodes() -> list:
     "Does nodes"
-    return descnodes().children
+    return descnodes()
 
 
 @pytest.mark.wbox
