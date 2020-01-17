@@ -8,6 +8,7 @@ import ast
 import operator as ops
 from . import astmappings
 import re
+import itertools
 from abc import ABC, abstractmethod
 
 body = ops.attrgetter('body')
@@ -123,13 +124,23 @@ class Node(_Node):
         self.full = full
         self.desc = desc
         self.ident = desc.ident
+        self.trialc = itertools.count()
 
     def __str__(self) -> str:
         return f'<{self.spec}:{self.spec}/{self.ident}>'
 
     @property
+    def trialsym(self) -> str:
+        count = next(self.trialc)
+        me = self.__class__.__name__
+        return f'trial_{me}_{count}'
+
+    @property
     def spec(self) -> str:
         return self.desc.spec
+
+    def trial(self, **env):
+        return tuple(tree.run_all(self.desc.full, **env).values())[0]
 
 
 class Statement(Node, Branch):
@@ -161,6 +172,10 @@ class Statement(Node, Branch):
     def primval(self) -> Any:
         return [desc.value for desc in self.desc.children]
 
+    def trial(self, **env):
+        symname, node = self.trialsym, self.desc.getcond()
+        return tree.run_sym(node, symname=symname, **env)
+
 
 class Block(Node, Branch):
     """
@@ -172,7 +187,7 @@ class Block(Node, Branch):
         self.simplify(desc.children)
 
         # Uughh bypass `simpany()` infinite recursion otherwise. XXX
-        self.stmt = Statement(full, desc.cond)
+        self.stmt = Statement(full, astmappings.desc(desc.cond.full))
 
         self._value = desc.value
 

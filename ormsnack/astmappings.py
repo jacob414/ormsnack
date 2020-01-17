@@ -3,7 +3,7 @@
 from _ast import *
 import ast
 from micropy.lang import callbytype  # type: ignore
-from typing import Any, Iterable, Callable
+from typing import Any, Iterable, Callable, Optional
 from dataclasses import dataclass
 import funcy
 
@@ -33,7 +33,7 @@ class NodeDesc(object):
     ident: str
     get: Callable[[], 'NodeDesc']
     set: Callable[[Any], None]
-    cond: Any = None
+    getcond: Optional[Callable[[], ast.AST]] = None
 
     @property
     def children(self) -> Iterable:
@@ -51,6 +51,10 @@ class NodeDesc(object):
     def value(self, value) -> 'NodeDesc':
         "Does _"
         self.set(self, value)
+
+    @property
+    def cond(self) -> 'NodeDesc':
+        return desc(self.getcond())
 
     def __len__(self) -> int:
         "Does __len__"
@@ -99,7 +103,7 @@ desc = callbytype({  # hm? starting out by just descending into it..
                   ident='if',
                   get=attrgetter('body'),
                   set=attrsetter('body'),
-                  cond=desc(iff.test)),
+                  getcond=lambda: iff.test),
     Call:
     lambda call: N(full=call,
                    spec=f'call/{call.func.id}',
@@ -112,7 +116,7 @@ desc = callbytype({  # hm? starting out by just descending into it..
                    ident=fdef.name,
                    get=decender(fdef.body),
                    set=attrsetter('body'),
-                   cond=desc(fdef.args)),
+                   getcond=(lambda: fdef.args)),
     arguments:
     lambda args: N(full=args,
                    spec='args',
@@ -149,6 +153,7 @@ desc = callbytype({  # hm? starting out by just descending into it..
     lambda ret: N(full=ret,
                   spec='return',
                   ident='return',
+                  getcond=(lambda: ret.value),
                   get=lambda _: desc(ret.value)(ret.value),
                   set=lambda v: setattr(ret, 'value', v)),
     Name:

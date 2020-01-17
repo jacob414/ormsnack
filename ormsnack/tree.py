@@ -58,37 +58,43 @@ def compile_ast(tree_: ast.AST, filename: str = None,
         filename = '<ormsnack.tree.eval_ast:?>'
     target = ast.Interactive(body=[assign(**{topsym: tree_})])
     try:
-        return compile(target, filename, 'single')
-    except TypeError:
-        target = ast.Module(body=[tree_])
-        return compile(target, filename, 'exec')
-    except SyntaxError:
-        msg = "Syntax error when trying to compile:\n{astunparse.unparse(target)}"
-        raise SyntaxError(msg)
+        try:
+            return compile(target, filename, 'single')
+        except TypeError:
+            target = ast.Module(body=[tree_])
+            return compile(target, filename, 'exec')
+    except SyntaxError as exc:
+        code_ = code(target)
+        print(f"Syntax error when compiling AST:\n{code_}")
+        raise
 
 
 ASTOrCode = Union[ast.AST, types.CodeType]
 
 
-def maybe_compile(target: ASTOrCode, filename: str = None) -> types.CodeType:
+def maybe_compile(target: ASTOrCode, filename: str = None,
+                  symname: str = None) -> types.CodeType:
     "Does maybe_compile"
     if isinstance(target, ast.AST):
-        compiled = compile_ast(target, filename)
+        if symname is None:
+            symname = 'xyz'
+        compiled = compile_ast(target, filename, topsym=symname)
         return compiled
     else:
         return target
 
 
-def run_all(target: ASTOrCode, **env: Tuple[str, Any]) -> Mapping[str, Any]:
+def run_all(target: ASTOrCode, symname: str = None,
+            **env: Tuple[str, Any]) -> Mapping[str, Any]:
     "Does exec"
     ns: Mapping[str, Any] = dict(env)
-    exec(maybe_compile(target), globals(), ns)
+    exec(maybe_compile(target, symname=symname), globals(), ns)
     return ns
 
 
-def run_sym(target: ASTOrCode, symname: str) -> Any:
+def run_sym(target: ASTOrCode, symname: str, **env: Tuple[str, Any]) -> Any:
     "Does run_sym"
-    full = run_all(target)
+    full = run_all(target, symname=symname, **env)
     return full[symname]
 
 

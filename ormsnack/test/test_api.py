@@ -56,3 +56,17 @@ def test_queries(query, idents) -> None:
     "Should find known nodes "
     found = [node for node in query]
     assert [node.ident for node in found] == idents
+
+
+@fixture.params("idx, env, expected",
+                (0, {}, 'Docstring'),
+                (1, {}, 1),
+                (2, {}, 2),
+                (3, {'x':1}, 2)
+)  # yapf: disable
+@pytest.mark.wbox
+def test_node_trial_steps(Fob, idx, env, expected) -> None:
+    "Should node_trial_steps"
+    step_ = Fob[idx]
+    res = step_.trial(**env)
+    assert res == expected
