@@ -3,7 +3,7 @@
 import pytest
 from typing import Any
 from ormsnack.tree import getast
-from ormsnack import astmappings as M
+from ormsnack import mappings as M
 from micropy.testing import fixture
 from micropy.dig import dig
 

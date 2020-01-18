@@ -6,7 +6,7 @@ from micropy import lang  # type: ignore
 import _ast
 import ast
 import operator as ops
-from . import astmappings
+from . import mappings
 import re
 import itertools
 from abc import ABC, abstractmethod
@@ -187,7 +187,7 @@ class Block(Node, Branch):
         self.simplify(desc.children)
 
         # Uughh bypass `simpany()` infinite recursion otherwise. XXX
-        self.stmt = Statement(full, astmappings.desc(desc.cond.full))
+        self.stmt = Statement(full, mappings.desc(desc.cond.full))
 
         self._value = desc.value
 
@@ -295,7 +295,7 @@ def simplify(node: Union[ast.AST, Iterable]) -> _Node:
     "Creates a simplified ormsnack Node object from any ast object"
 
     Kind = simplifiers[type(node)]
-    desc = astmappings.desc(node)
+    desc = mappings.desc(node)
     return Kind(node, desc)
 
 
