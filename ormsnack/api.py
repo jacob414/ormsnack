@@ -173,7 +173,7 @@ class Statement(Node, Branch):
         return [desc.value for desc in self.desc.children]
 
     def trial(self, **env):
-        symname, node = self.trialsym, self.desc.getcond()
+        symname, node = self.trialsym, self.desc.getexpr()
         return tree.run_sym(node, symname=symname, **env)
 
 
@@ -187,7 +187,7 @@ class Block(Node, Branch):
         self.simplify(desc.children)
 
         # Uughh bypass `simpany()` infinite recursion otherwise. XXX
-        self.stmt = Statement(full, mappings.desc(desc.cond.full))
+        self.stmt = Statement(full, mappings.desc(desc.expr.full))
 
         self._value = desc.value
 
