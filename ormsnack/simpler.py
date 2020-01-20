@@ -53,8 +53,13 @@ class _Node(ABC):
     @property
     @abstractmethod
     def value(self) -> Any:
-        raise NotImplementedError(".value property not overridden")
+        raise NotImplementedError(".value property getter not overridden")
 
+    @property
+    @abstractmethod
+    def value(self, value: Any) -> None:
+        raise NotImplementedError(".value property setter not overridden")
+    
     @property
     @abstractmethod
     def children(self) -> Iterable:
@@ -101,6 +106,10 @@ class Leaf(_Node, ABC):
         literals, the name as a String for Symbols."""
         return self.desc.value
 
+    @value.setter
+    def value(self, value: Any) -> None:
+        self.desc.value = value
+    
     @property
     def primval(self) -> Any:
         """Primitive value property - for leaf nodes thats the Python literal

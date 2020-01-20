@@ -59,10 +59,11 @@ def test_queries(query, idents) -> None:
 
 
 @fixture.params("idx, env, expected",
-                (0, {}, 'Docstring'),
-                (1, {}, 1),
-                (2, {}, 2),
-                (3, {'x':1}, 2)
+  (0, {}, 'Docstring'),
+  (1, {}, 1),
+  (2, {}, 2),
+  (3, {'x':1}, 2)
+
 )  # yapf: disable
 @pytest.mark.wbox
 def test_node_trial_steps(Fob, idx, env, expected) -> None:
@@ -70,3 +71,16 @@ def test_node_trial_steps(Fob, idx, env, expected) -> None:
     step_ = Fob[idx]
     res = step_.trial(**env)
     assert res == expected
+
+@fixture.params("idx, env, change",
+  (0, {}, "Foo"),
+  (1, {}, 10),
+  (2, {}, 8),
+
+)  # yapf: disable
+@pytest.mark.wbox
+def test_node_change_re_trial(Fob, idx, env, change) -> None:
+    "Should node_change_re_trial"
+    node = Fob[idx]
+    node.value = change
+    assert node.trial(**env) == change
