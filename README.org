@@ -17,7 +17,7 @@ The more high-level idea is to simplify AST nodes into a few
 categories (Right now there's =Statement=, =Block=, =Symbol= and
 =Literal=). A few might follow. A top-level function will take any
 live object, transform to this simplified AST and use the Query DLS
-developed seperately in [[https://github.com/jacob414/micropy#a-simple-way-of-creating-small-dsls-using-python-operator-overloading][micropy]].
+developed seperately in [[https://github.com/JacobOscarson/micropy][micropy]].
 
 You should be able to use the DSL to query for nodes in the simplified
 AST, e.g. like this using strict equal matching:

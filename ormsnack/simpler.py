@@ -10,7 +10,7 @@ native AST nodes in as few categories we can get away with:
   - Literal nodes (hard-coded values)
 """
 from ormsnack import tree
-from typing import Any, List, Iterable, Callable, Union, Optional
+from typing import Any, List, Iterable, Callable, Union, Optional, Sized, cast
 import funcy  # type: ignore
 from micropy import lang  # type: ignore
 import _ast
@@ -25,18 +25,26 @@ body = ops.attrgetter('body')
 hasbody = lambda o: hasattr(o, 'body')
 
 
-class _Node(ABC):
+class AbstractNode(ABC):
+    ...
+
+
+class Node(AbstractNode):
+    ...
+
+
+class AbstractNode(ABC):  # type: ignore
     """The top-level abstraction for Node's. Beware that at the top of the
     module an empty class that is later overridden by one with the
     same name is declared. This is to make the typing hints more
     readable.
 
     """
-    _value: List['_Node'] = []
-    _simpler: List['_Node'] = []
-    elements: List['_Node'] = []
+    _simpler: List[Node] = []
+    elements: List[Node] = []
+    body: List[Node] = []
     org: Optional[ast.AST] = None
-    simpler: Optional['_Node'] = None
+    simpler: Optional[Node] = None
     ident: str = '?'
 
     @property
@@ -57,24 +65,24 @@ class _Node(ABC):
 
     @property
     @abstractmethod
-    def value(self, value: Any) -> None:
-        raise NotImplementedError(".value property setter not overridden")
-    
-    @property
-    @abstractmethod
     def children(self) -> Iterable:
         raise NotImplementedError(".value property not overridden")
 
+    @property
+    def linear(self) -> Iterable[Node]:
+        "Linear representation - the node itself followed by it's children"
+        return [cast(Node, self), *self.children]
 
-class Branch(_Node, ABC):
+
+class Branch(AbstractNode, ABC):
     "Marker/common behaviour for branching nodes"
 
     def simplify(self, children):
         self.body = simpany(children)
 
-    def __getitem__(self, idx: Any) -> Iterable[_Node]:
+    def __getitem__(self, idx: Any) -> Iterable[AbstractNode]:
         "Should return child node(s) from this branch specified by `idx`."
-        return self.children[idx]
+        return self.linear[idx]
 
     def __len__(self) -> int:
         return len(self.body)
@@ -90,14 +98,14 @@ class Branch(_Node, ABC):
         raise NotImplementedError("Branch nodes doesn't have primitive values")
 
     @property
-    def children(self) -> List[_Node]:
-        return self.body
+    def children(self) -> List[Node]:
+        return [simplify(desc.full) for desc in self.desc.children]
 
 
 isbranch = funcy.isa(Branch)
 
 
-class Leaf(_Node, ABC):
+class Leaf(AbstractNode, ABC):
     "Marker for leaf nodes"
 
     @property
@@ -109,7 +117,7 @@ class Leaf(_Node, ABC):
     @value.setter
     def value(self, value: Any) -> None:
         self.desc.value = value
-    
+
     @property
     def primval(self) -> Any:
         """Primitive value property - for leaf nodes thats the Python literal
@@ -120,15 +128,19 @@ class Leaf(_Node, ABC):
 
     @property
     def children(self) -> Iterable:
-        return []  # pragma: nocov   (just a safeguard)
+        return [self]  # pragma: nocov   (just a safeguard)
+
+    @property
+    def linear(self):
+        return []
 
 
 isleaf = funcy.isa(Branch)
 
-isnode = funcy.isa(_Node)
+isnode = funcy.isa(AbstractNode)
 
 
-class Node(_Node):
+class Node(AbstractNode):
     """
     Defined on Node:
 
@@ -139,7 +151,6 @@ class Node(_Node):
     .desc = ??? description?
     """
     def __init__(self, full, desc):
-        self._value = desc.value
         self.full = full
         self.desc = desc
         self.ident = desc.ident
@@ -158,8 +169,35 @@ class Node(_Node):
     def spec(self) -> str:
         return self.desc.spec
 
-    def trial(self, **env):
+    def __eq__(self, value):
+        return self.desc.value == value
+
+    def __call__(self, **env):
         return tuple(tree.run_all(self.desc.full, **env).values())[0]
+
+    def __hash__(self):
+        return hash(self.desc)
+
+class NodeCollection(object):
+    def __getitem__(self, idx) -> Any:
+        "Finds individual node in itself or searches.."
+        try:
+            return super().__getitem__(idx)
+        except TypeError:
+            return self.__class__([node for node in self if node.spec == idx])
+
+    @property
+    def value(self) -> Any:
+        return [node.value for node in self]
+
+
+def nodes(src: Iterable) -> NodeCollection:
+    "Does nodes"
+
+    class NodeCollected(NodeCollection, src.__class__):
+        pass
+
+    return NodeCollected(src)
 
 
 class Statement(Node, Branch):
@@ -180,10 +218,6 @@ class Statement(Node, Branch):
         return f'<Statement:{self.desc.spec}>'
 
     @property
-    def children(self):
-        return self.elements
-
-    @property
     def spec(self) -> str:
         return self.desc.spec
 
@@ -191,8 +225,10 @@ class Statement(Node, Branch):
     def primval(self) -> Any:
         return [desc.value for desc in self.desc.children]
 
-    def trial(self, **env):
-        symname, node = self.trialsym, self.desc.getexpr()
+    def __call__(self, **env):
+        symname = self.trialsym
+        node = self.desc.expr
+        symname, node = self.trialsym, self.desc.expr
         return tree.run_sym(node, symname=symname, **env)
 
 
@@ -206,9 +242,7 @@ class Block(Node, Branch):
         self.simplify(desc.children)
 
         # Uughh bypass `simpany()` infinite recursion otherwise. XXX
-        self.stmt = Statement(full, mappings.desc(desc.expr.full))
-
-        self._value = desc.value
+        self.stmt = Statement(full, mappings.desc(desc.expr))
 
     def __str__(self) -> str:
         return f'<Block:{self.ident}{self.stmt.desc.ident}>'
@@ -229,11 +263,11 @@ class Symbol(Node, Leaf):
 
     @property
     def codeish(self) -> str:
-        return str(self._value)
+        return str(self.value)
 
     @property
     def primval(self) -> Any:
-        return self._value
+        return self.value
 
 
 class Expr(Node, Branch):
@@ -264,8 +298,6 @@ class Expr(Node, Branch):
 class Literal(Node, Leaf):
     def __init__(self, full, desc):
         super().__init__(full, desc)
-        self._value = self.name = desc.value
-        # self.desc = desc.value
 
     def __str__(self) -> str:
         "Return string representation of this Node"
@@ -273,12 +305,12 @@ class Literal(Node, Leaf):
 
     @property
     def primval(self) -> Any:
-        return self._value
+        return self.value
 
     @property
     def codeish(self) -> str:
         "Does codeish"
-        return str(self._value)
+        return str(self.value)
 
 
 # Maps native AST nodes to their simplified equivalent
@@ -299,20 +331,20 @@ simplifiers = {
 NodeOrIter = Union[ast.AST, Iterable, Node]
 
 
-def simpany(node_or_many: NodeOrIter) -> Union[_Node, Iterable[_Node]]:
-    "Converts objects or iterables to Ormsnack Node object(s)."
+def simpany(node_or_many: NodeOrIter) -> Union[ast.AST, Iterable[Node]]:
+    "Converts objects or iterables to Ormsnack Node object(s)"
+
     if isinstance(node_or_many, ast.AST):
         return simplify(node_or_many)
     elif isinstance(node_or_many, Node):
         return node_or_many
     elif funcy.is_seqcoll(node_or_many):
-        return [simplify(desc.full) for desc in node_or_many]
+        return node_or_many
     raise TypeError(f'Unclassifiable node ({node_or_many!r})')
 
 
-def simplify(node: Union[ast.AST, Iterable]) -> _Node:
+def simplify(node: Union[ast.AST, Iterable]) -> Node:
     "Creates a simplified ormsnack Node object from any ast object"
 
-    Kind = simplifiers[type(node)]
-    desc = mappings.desc(node)
+    Kind, desc = simplifiers[type(node)], mappings.desc(node)
     return Kind(node, desc)

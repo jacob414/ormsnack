@@ -7,15 +7,7 @@ from ormsnack import mappings as M
 from micropy.testing import fixture
 from micropy.dig import dig
 
-
-def foo(x: Any) -> None:
-    "Docstring"
-    1
-    2
-    return x + 3
-
-
-tree = getast(foo)
+from .examples import *
 
 
 def descnodes() -> list:
@@ -36,16 +28,24 @@ def nodes() -> list:
 
 
 @pytest.mark.wbox
+def test_mapping_top() -> None:
+    "Should map top node correctly (guards against recursion risk)"
+    assert M.desc(tree).ident == 'foo'
+
+
+@pytest.mark.wbox
 @fixture.params(
-    "index, type_",
-    (0, str),
-    (1, int),
-    (2, int),
-    (3, list),
+    "index, expected",
+    (0, []),
+    (1, []),
+    (2, []),
+    (3, ['x', '+', 3]),
 )
-def test_typecheck_values(node_types, index, type_) -> None:
-    "Should typecheck_values"
-    assert node_types[index] == type_
+def test_children(nodes, index, expected) -> None:
+    "Should return correct children"
+    node = nodes[index]
+    kids = node.children
+    assert [node.value for node in kids] == expected
 
 
 @pytest.mark.wbox
