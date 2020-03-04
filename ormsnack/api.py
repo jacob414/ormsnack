@@ -40,10 +40,11 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
     def __call__(self, *params, **opts):
         return super(lang.LogicPiping, self).__call__(*params, **opts)
 
-    def __rshift__(self,
-                   stepf: Callable[[Any, None, None], Any]) -> 'ASTQuery':
+    def __eq__(self, exact) -> 'ASTQuery':
         "Bitwise OR as simple function composition"
-        self.logically(stepf, True, object())
+        top = self.rep
+        self.logically((lambda node: node.ident == exact), True)
+        self.run_q(top)
         return self
 
     def __lshift__(self, value: Any) -> 'ASTQuery':
@@ -55,7 +56,7 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
             # print(f'{value} == {textual} {value == textual}?')
             return str(value) == textual
 
-        self.logically(scanner(value, exact), True, object())
+        self.logically(scanner(value, exact), True)
         return self
 
     def __matmul__(self, pattern: str) -> 'ASTQuery':
@@ -66,7 +67,7 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
             "Does rx_node_fn"
             return bool(rx.match(node.ident))
 
-        self.logically(rx_node_fn, True, object())
+        self.logically(rx_node_fn, True)
         return self
 
     @property

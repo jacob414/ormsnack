@@ -28,7 +28,7 @@ AST, e.g. like this using strict equal matching:
 ... def foo(x: int) -> int:
 ...     return x + 23
 >>> snack = api.snacka(foo)
->>> for node in snack << 'foo':
+>>> for node in snack == 'foo':
 ...     print(node)
 <Block:foo(x)>
 >>>
