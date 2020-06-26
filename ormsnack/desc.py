@@ -2,6 +2,7 @@
 
 from _ast import *
 import ast
+
 from kingston import lang
 from kingston import match
 
@@ -89,7 +90,7 @@ class NodeDesc(object):  # type: ignore
         return len(self.children)
 
     def __getitem__(self, idx) -> Any:
-        return self.children[idx]
+        return self.children[idx]  # type: ignore
 
     def __hash__(self):
         value = self.get()
