@@ -5,9 +5,9 @@ from ormsnack import api
 from typing import Any
 import _ast
 import codegen
-from micropy import microscope as ms
-from micropy import dig
-from micropy.testing import fixture
+from kingston import microscope as ms
+from kingston import dig
+from kingston.testing import fixture
 
 from .examples import *
 

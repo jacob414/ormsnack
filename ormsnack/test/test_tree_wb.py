@@ -1,5 +1,5 @@
 import pytest  # type: ignore
-from micropy.testing import fixture  # type: ignore
+from kingston.testing import fixture  # type: ignore
 from ormsnack import tree
 import ast
 import types

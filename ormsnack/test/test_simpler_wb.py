@@ -8,8 +8,8 @@ from typing import Any
 from ormsnack import simpler as S
 from ormsnack.tree import getast
 from ormsnack import mappings as M
-from micropy.testing import fixture
-from micropy.dig import dig
+from kingston.testing import fixture
+from kingston.dig import dig
 
 pytestmark = pytest.mark.wbox
 

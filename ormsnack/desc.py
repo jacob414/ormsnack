@@ -2,7 +2,9 @@
 
 from _ast import *
 import ast
-from micropy import lang
+from kingston import lang
+from kingston import match
+
 from typing import Any, Iterable, Callable, Optional, Union, Collection, cast
 from dataclasses import dataclass
 import funcy
@@ -126,7 +128,7 @@ def descender(nodes: Iterable[ast.AST]) -> Iterable[NodeDesc]:
     return lambda: [desc(node) for node in nodes]
 
 
-class nodedisp(lang.callbytype):
+class nodedisp(match.Match):
     def __call__(self, native: Native) -> Described:
         describe = super().__call__
         if funcy.is_seqcoll(native):

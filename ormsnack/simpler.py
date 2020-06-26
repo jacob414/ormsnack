@@ -12,7 +12,7 @@ native AST nodes in as few categories we can get away with:
 from ormsnack import tree
 from typing import Any, List, Iterable, Callable, Union, Optional, Sized, cast
 import funcy  # type: ignore
-from micropy import lang  # type: ignore
+from kingston import lang  # type: ignore
 import _ast
 import ast
 import operator as ops

@@ -2,7 +2,7 @@
 
 from _ast import *
 import ast
-from micropy import lang
+from kingston import lang
 from typing import Any, Iterable, Callable, Optional, Union, Collection, cast
 from dataclasses import dataclass
 import funcy
