@@ -6,17 +6,21 @@ from kingston import lang
 from kingston import match
 
 from typing import Any, Iterable, Callable, Optional, Union, Collection, cast
+import types
 from dataclasses import dataclass
-import funcy
+import funcy  # type: ignore
+from collections import namedtuple
 
 
 class NodeDesc(object):
     ...
 
 
+NodeState = namedtuple("NodeState", ("full", "spec", "ident", "value", "expr"))
+
 # Note: the actual value is injected from the mappings module after it
 # has been defined to avoid a circular dependency.
-desc: Callable[[ast.AST], NodeDesc] = ...
+desc: Callable[[ast.AST], NodeDesc] = ...  # type: ignore
 
 AstAttrGetter = Callable[[], Any]
 AstAttrSetter = Callable[[Any], None]
@@ -25,24 +29,26 @@ PrimOrDesc = Union[NodeDesc, Any]
 Native = Union[ast.AST, Collection[ast.AST]]
 Described = Union[NodeDesc, Collection[NodeDesc]]
 MaybeDesc = Callable[[ast.AST], NodeDesc]
+Value = Union[Union[NodeDesc, Collection[NodeDesc], Any]]
 
 
 @dataclass
 class NodeDesc(object):  # type: ignore
-    full: ast.AST
-    spec: Any
     ident: str
     get: AstAttrGetter
     set: AstAttrSetter
-    hide: bool = False
+    state: Callable[[], NodeState]
     getexpr: ExprGetter = lambda: None
 
     @property
-    def children(self) -> Collection[NodeDesc]:
+    def full(self) -> ast.AST:
+        "Returns the native AST node for this NodeDesc object."
+        return self.state().full  # type: ignore
+
+    @property
+    def children(self) -> Union[NodeDesc, Collection[NodeDesc]]:
         "NodeDesc objects for all children descending from AST node."
         value_or_desc = self.value
-        # if isinstance(value_or_desc, ast.AST):
-        #     return desc(value_or_desc)
         if funcy.is_seqcoll(value_or_desc):
             # XXX: typing ???
             return value_or_desc
@@ -50,13 +56,10 @@ class NodeDesc(object):  # type: ignore
             return []
 
     @property
-    def value(self) -> Union[Union[NodeDesc, Collection[NodeDesc], Any]]:
+    def value(self) -> Value:
         # XXX how to handle self here?
-        raw = self.get()
-        if lang.isprimitive(raw):
-            return raw  # -> Any
-        else:
-            return desc(raw)  # -> NodeDesc
+        raw = self.state().value  # type: ignore
+        return raw
 
     @value.setter
     def value(self, value) -> None:
@@ -65,9 +68,14 @@ class NodeDesc(object):  # type: ignore
         self.set(value)  # type: ignore
 
     @property
+    def spec(self) -> str:
+        return self.state().spec  # type: ignore
+
+    @property
     def expr(self) -> Optional[ast.AST]:
-        if callable(self.getexpr):
-            return self.getexpr()
+        state = self.state()  # type: ignore
+        if state.expr:
+            return state.expr
         else:
             raise AttributeError('No expression given for this NodeDesc.')
 
@@ -75,7 +83,7 @@ class NodeDesc(object):  # type: ignore
         "Does __len__"
         children = self.children
         if funcy.is_seqcoll(children):
-            return len(children)
+            return len(cast(Collection, children))
         else:
             raise
         return len(self.children)
@@ -91,9 +99,6 @@ class NodeDesc(object):  # type: ignore
             valuehash = sum(hash(node) for node in self.get())
         return hash(self.full) + hash(self.spec) + valuehash + sum(
             hash(child) for child in self.children)
-
-
-N = NodeDesc
 
 
 def astattrsetter(node: ast.AST, attrname: str) -> AstAttrSetter:
@@ -123,7 +128,7 @@ def descend(*nodes: ast.AST) -> Iterable[NodeDesc]:
     return [desc(node) for node in nodes]
 
 
-def descender(nodes: Iterable[ast.AST]) -> Iterable[NodeDesc]:
+def descender(nodes: Iterable[ast.AST]) -> Callable[[], Iterable[NodeDesc]]:
     # "Returns a generalised descend function"
     return lambda: [desc(node) for node in nodes]
 
@@ -132,6 +137,6 @@ class nodedisp(match.Match):
     def __call__(self, native: Native) -> Described:
         describe = super().__call__
         if funcy.is_seqcoll(native):
-            return [describe(node) for node in native]
+            return native
         else:
             return describe(native)
