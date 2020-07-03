@@ -51,7 +51,8 @@ def assign(**exprs) -> ast.AST:
     return ast.fix_missing_locations(node)
 
 
-def compile_ast(tree_: ast.AST, filename: str = None,
+def compile_ast(tree_: ast.AST,
+                filename: str = None,
                 topsym: str = 'xyz') -> types.CodeType:
     "Compiles `tree_`, returning recompiled ast (if `compile()` succeeds"
     if filename is None:
@@ -72,7 +73,8 @@ def compile_ast(tree_: ast.AST, filename: str = None,
 ASTOrCode = Union[ast.AST, types.CodeType]
 
 
-def maybe_compile(target: ASTOrCode, filename: str = None,
+def maybe_compile(target: ASTOrCode,
+                  filename: str = None,
                   symname: str = None) -> types.CodeType:
     "Does maybe_compile"
     if isinstance(target, ast.AST):
@@ -84,7 +86,8 @@ def maybe_compile(target: ASTOrCode, filename: str = None,
         return target
 
 
-def run_all(target: ASTOrCode, symname: str = None,
+def run_all(target: ASTOrCode,
+            symname: str = None,
             **env: Tuple[str, Any]) -> Mapping[str, Any]:
     "Does exec"
     ns: Mapping[str, Any] = dict(env)
