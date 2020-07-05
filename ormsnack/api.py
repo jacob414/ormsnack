@@ -78,7 +78,6 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
         "Perform a query on AST tree."
         # self.zero()
         pfunc = super(lang.LogicPiping, self).__call__
-        accum: List[Node] = []
         all_ = tuple(funcy.flatten((sub.linear for sub in top.linear)))
         res = [node for node in all_ if pfunc(node)]
         return res
