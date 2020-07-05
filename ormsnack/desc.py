@@ -6,14 +6,11 @@ from collections import namedtuple
 from dataclasses import dataclass
 from typing import Any, Callable, Collection, Iterable, Optional, Union, cast
 
-import funcy
-from kingston import lang, match
+import funcy as fy  # type: ignore
+from kingston import lang, match  # type: ignore
 from ormsnack import desc
 
-
-class NodeDesc(object):
-    ...
-
+from .defs import NodeDesc, Native, Value, Described
 
 NodeState = namedtuple("NodeState", ("full", "spec", "ident", "value", "expr"))
 
@@ -25,10 +22,7 @@ AstAttrGetter = Callable[[], Any]
 AstAttrSetter = Callable[[Any], None]
 ExprGetter = Optional[Callable[[], Optional[ast.AST]]]
 PrimOrDesc = Union[NodeDesc, Any]
-Native = Union[ast.AST, Collection[ast.AST]]
-Described = Union[NodeDesc, Collection[NodeDesc]]
 MaybeDesc = Callable[[ast.AST], NodeDesc]
-Value = Union[Union[NodeDesc, Collection[NodeDesc], Any]]
 
 
 @dataclass
@@ -48,7 +42,7 @@ class NodeDesc(object):  # type: ignore
     def children(self) -> Union[NodeDesc, Collection[NodeDesc]]:
         "NodeDesc objects for all children descending from AST node."
         value_or_desc = self.value
-        if funcy.is_seqcoll(value_or_desc):
+        if fy.is_seqcoll(value_or_desc):
             # XXX: typing ???
             return value_or_desc
         else:
@@ -81,7 +75,7 @@ class NodeDesc(object):  # type: ignore
     def __len__(self) -> int:
         "Does __len__"
         children = self.children
-        if funcy.is_seqcoll(children):
+        if fy.is_seqcoll(children):
             return len(cast(Collection, children))
         else:
             raise
@@ -135,7 +129,7 @@ def descender(nodes: Iterable[ast.AST]) -> Callable[[], Iterable[NodeDesc]]:
 class nodedisp(match.Match):
     def __call__(self, native: Native) -> Described:
         describe = super().__call__
-        if funcy.is_seqcoll(native):
+        if fy.is_seqcoll(native):
             return native
         else:
             return describe(native)
