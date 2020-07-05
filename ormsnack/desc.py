@@ -4,15 +4,11 @@ import ast
 import types
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import Any, Callable, Collection, Iterable, Optional, Union, cast
+from typing import Any, Callable, List, Iterable, Optional, Union, cast
 
 import funcy as fy  # type: ignore
+from .defs import Described, Native, NodeDesc, NodeState, Value
 from kingston import lang, match  # type: ignore
-from ormsnack import desc
-
-from .defs import NodeDesc, Native, Value, Described
-
-NodeState = namedtuple("NodeState", ("full", "spec", "ident", "value", "expr"))
 
 # Note: the actual value is injected from the mappings module after it
 # has been defined to avoid a circular dependency.
@@ -39,12 +35,12 @@ class NodeDesc(object):  # type: ignore
         return self.state().full  # type: ignore
 
     @property
-    def children(self) -> Union[NodeDesc, Collection[NodeDesc]]:
+    def children(self) -> List[NodeDesc]:
         "NodeDesc objects for all children descending from AST node."
         value_or_desc = self.value
         if fy.is_seqcoll(value_or_desc):
             # XXX: typing ???
-            return value_or_desc
+            return cast(List[NodeDesc], value_or_desc)
         else:
             return []
 
@@ -76,7 +72,7 @@ class NodeDesc(object):  # type: ignore
         "Does __len__"
         children = self.children
         if fy.is_seqcoll(children):
-            return len(cast(Collection, children))
+            return len(cast(List[NodeDesc], children))
         else:
             raise
         return len(self.children)
@@ -130,6 +126,6 @@ class nodedisp(match.Match):
     def __call__(self, native: Native) -> Described:
         describe = super().__call__
         if fy.is_seqcoll(native):
-            return native
+            return desc(native)  # type: ignore
         else:
             return describe(native)

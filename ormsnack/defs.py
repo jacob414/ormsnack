@@ -1,5 +1,5 @@
 import ast
-from typing import Any, Collection, NamedTuple, Union
+from typing import Any, Collection, List, NamedTuple, Union
 
 
 class NodeDesc(object):
@@ -34,6 +34,7 @@ class NodeState(NamedTuple):
     expr: Any
 
 
-Native = Union[ast.AST, Collection[ast.AST]]
+Native = Union[ast.AST, List[ast.AST]]
 Value = Union[Union[NodeDesc, Collection[NodeDesc], Any]]
-Described = Union[NodeDesc, Collection[NodeDesc]]
+NodeDescList = List[NodeDesc]
+Described = Union[NodeDesc, List[NodeDesc]]
