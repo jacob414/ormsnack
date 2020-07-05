@@ -9,17 +9,19 @@ native AST nodes in as few categories we can get away with:
   - Symbol nodes (variable references)
   - Literal nodes (hard-coded values)
 """
-from ormsnack import tree
-from typing import Any, List, Iterable, Callable, Union, Optional, Sized, cast
-import funcy  # type: ignore
-from kingston import lang  # type: ignore
-import _ast
 import ast
-import operator as ops
-from . import mappings
-import re
 import itertools
+import operator as ops
+import re
 from abc import ABC, abstractmethod
+from typing import (Any, Callable, Iterable, List, Optional, Sized, Union,
+                    cast)
+
+import funcy as fy
+import _ast
+from . import mappings
+from kingston import lang
+from ormsnack import tree
 
 body = ops.attrgetter('body')
 hasbody = lambda o: hasattr(o, 'body')
@@ -102,7 +104,7 @@ class Branch(AbstractNode, ABC):
         return [simplify(desc.full) for desc in self.desc.children]
 
 
-isbranch = funcy.isa(Branch)
+isbranch = fy.isa(Branch)
 
 
 class Leaf(AbstractNode, ABC):
@@ -135,9 +137,9 @@ class Leaf(AbstractNode, ABC):
         return []
 
 
-isleaf = funcy.isa(Branch)
+isleaf = fy.isa(Branch)
 
-isnode = funcy.isa(AbstractNode)
+isnode = fy.isa(AbstractNode)
 
 
 class Node(AbstractNode):
@@ -177,6 +179,7 @@ class Node(AbstractNode):
 
     def __hash__(self):
         return hash(self.desc)
+
 
 class NodeCollection(object):
     def __getitem__(self, idx) -> Any:
@@ -339,7 +342,7 @@ def simpany(node_or_many: NodeOrIter) -> Union[ast.AST, Iterable[Node]]:
         return simplify(node_or_many)
     elif isinstance(node_or_many, Node):
         return node_or_many
-    elif funcy.is_seqcoll(node_or_many):
+    elif fy.is_seqcoll(node_or_many):
         return node_or_many
     raise TypeError(f'Unclassifiable node ({node_or_many!r})')
 
