@@ -1,19 +1,15 @@
 # yapf
 
-from _ast import *
 import ast
-from kingston import lang
-from kingston import match
-
-from typing import Any, Iterable, Callable, Optional, Union, Collection, cast
 from dataclasses import dataclass
-import funcy
+from typing import Any, Callable, Collection, Iterable, Optional, Union, cast
 
 from . import desc as desc_module
-
-from .desc import (NodeDesc, nodedisp, AstAttrGetter, AstAttrSetter,
-                   ExprGetter, PrimOrDesc, astattrgetter, astattrsetter,
-                   descender)
+from .desc import (AstAttrGetter, AstAttrSetter, ExprGetter, NodeDesc,
+                   PrimOrDesc, astattrgetter, astattrsetter, descender,
+                   nodedisp)
+from kingston import lang, match
+from ormsnack import desc
 
 N = NodeDesc
 snap = desc_module.NodeState
