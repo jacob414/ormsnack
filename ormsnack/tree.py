@@ -7,6 +7,7 @@ from typing import Any, Mapping, Tuple, Optional, Union
 import types
 from functools import singledispatch
 import astunparse
+from . import lowlevel as low
 
 
 def code(node: ast.AST) -> str:  # pragma: nocov
@@ -57,12 +58,14 @@ def compile_ast(tree_: ast.AST,
     "Compiles `tree_`, returning recompiled ast (if `compile()` succeeds"
     if filename is None:
         filename = '<ormsnack.tree.eval_ast:?>'
+
     target = ast.Interactive(body=[assign(**{topsym: tree_})])
     try:
         try:
             return compile(target, filename, 'single')
         except TypeError:
-            target = ast.Module(body=[tree_])
+            target = low.module(tree_)
+
             return compile(target, filename, 'exec')
     except SyntaxError as exc:
         code_ = code(target)
