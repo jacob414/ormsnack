@@ -111,6 +111,15 @@ desc: nodedisp = nodedisp({  # hm? starting out by just descending into it..
                   getexpr=astattrgetter(ret, 'value'),
                   get=astattrgetter(ret, 'value'),
                   set=astattrsetter(ret, 'value')),
+    ast.Constant:
+    lambda con: N(state=lambda cur=con: snap(full=cur,
+                                             spec=type(cur.value),
+                                             ident=str(cur.value),
+                                             value=cur.value,
+                                             expr=()),
+                  ident=str(con.value),
+                  get=astattrgetter(con, 'value'),
+                  set=astattrsetter(con, 'value')),
     ast.Name:
     lambda name: N(state=lambda cur=name: snap(
         full=cur, spec=cur.id, ident=cur.id, value=cur.id, expr=()),

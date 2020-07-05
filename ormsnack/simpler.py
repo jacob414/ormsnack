@@ -326,6 +326,7 @@ simplifiers = {
     ast.arg: Symbol,
     ast.Add: Symbol,
     ast.If: Block,
+    ast.Constant: Literal,
 }
 
 NodeOrIter = Union[ast.AST, Iterable, Node]
