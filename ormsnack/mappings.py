@@ -18,7 +18,7 @@ desc: nodedisp = nodedisp({  # hm? starting out by just descending into it..
     # XXX irregularity:
     ast.BinOp:
     lambda bo: [desc(bo.left), desc(bo.op),
-                desc(bo.right)],
+                desc(bo.right)],  # XXX idea: define special type?
     ast.Expr:
     lambda expr: desc(expr.value),
     ast.If:
@@ -27,7 +27,6 @@ desc: nodedisp = nodedisp({  # hm? starting out by just descending into it..
                                              ident='if',
                                              value=[desc(n) for n in cur.body],
                                              expr=cur.test),
-                  ident='if',
                   get=lambda: [desc(n) for n in iff.body],
                   set=astattrsetter(iff, 'body'),
                   getexpr=astattrgetter(iff, 'test')),
@@ -37,7 +36,6 @@ desc: nodedisp = nodedisp({  # hm? starting out by just descending into it..
                                                ident=dn.func.id,
                                                value=cur.func,
                                                expr=()),
-                   ident=call.func.id,
                    get=astattrgetter(call, 'func'),
                    set=astattrsetter(call, 'func')),
     ast.FunctionDef:
@@ -47,7 +45,6 @@ desc: nodedisp = nodedisp({  # hm? starting out by just descending into it..
         ident=cur.name,
         value=[desc(child) for child in cur.body],
         expr=cur.args),
-                   ident=fdef.name,
                    get=astattrgetter(fdef, 'body'),
                    set=astattrsetter(fdef, 'body'),
                    getexpr=astattrgetter(fdef, 'args')),
@@ -58,14 +55,12 @@ desc: nodedisp = nodedisp({  # hm? starting out by just descending into it..
         ident='({})'.format(','.join(arg.arg for arg in args.args)),
         value=cur.args,
         expr=()),
-                   ident='({})'.format(','.join(arg.arg for arg in args.args)),
                    get=astattrgetter(args, 'args'),
                    set=astattrsetter(args, 'args')),
     ast.arg:
     lambda arg: N(
         state=lambda cur=arg: snap(
             full=cur, spec='arg', ident=cur.arg, value=cur.arg, expr=()),
-        ident=arg.arg,
         get=astattrgetter(arg, 'arg'),
         set=astattrsetter(arg, 'arg'),
     ),
@@ -76,25 +71,21 @@ desc: nodedisp = nodedisp({  # hm? starting out by just descending into it..
         ident='cmp',
         value=descender([cur.left, *cur.comparators]),
         expr=()),
-                   ident='cmp',
                    get=descender([cmp_.left, *cmp_.comparators]),
                    set=astattrsetter(cmp_, 'comparators')),
     ast.Str:
     lambda s: N(state=lambda cur=s: snap(
         full=cur, spec=str, ident=s.s, value=s.s, expr=()),
-                ident=s.s,
                 get=astattrgetter(s, 's'),
                 set=astattrsetter(s, 's')),
     ast.Num:
     lambda num: N(state=lambda cur=num: snap(
         full=cur, spec=type(cur.n), ident=str(cur.n), value=cur.n, expr=()),
-                  ident=str(num.n),
                   get=astattrgetter(num, 'n'),
                   set=astattrsetter(num, 'n')),
     ast.Add:
     lambda a: N(state=lambda cur=a: snap(
         full=cur, spec='op/+', ident='+', value='+', expr=()),
-                ident='+',
                 get=lambda: '+',
                 set=astattrsetter(a, 'op')),
     ast.Return:
@@ -103,7 +94,6 @@ desc: nodedisp = nodedisp({  # hm? starting out by just descending into it..
                                              ident='return',
                                              value=desc(cur.value),
                                              expr=cur.value),
-                  ident='return',
                   getexpr=astattrgetter(ret, 'value'),
                   get=astattrgetter(ret, 'value'),
                   set=astattrsetter(ret, 'value')),
@@ -113,13 +103,11 @@ desc: nodedisp = nodedisp({  # hm? starting out by just descending into it..
                                              ident=str(cur.value),
                                              value=cur.value,
                                              expr=()),
-                  ident=str(con.value),
                   get=astattrgetter(con, 'value'),
                   set=astattrsetter(con, 'value')),
     ast.Name:
     lambda name: N(state=lambda cur=name: snap(
         full=cur, spec=cur.id, ident=cur.id, value=cur.id, expr=()),
-                   ident=name.id,
                    get=astattrgetter(name, 'id'),
                    set=astattrsetter(name, 'id'))
 })

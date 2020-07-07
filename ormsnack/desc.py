@@ -19,20 +19,24 @@ AstAttrSetter = Callable[[Any], None]
 ExprGetter = Optional[Callable[[], Optional[ast.AST]]]
 PrimOrDesc = Union[NodeDesc, Any]
 MaybeDesc = Callable[[ast.AST], NodeDesc]
-
+NodeStateFn = Callable[[], NodeState]
 
 @dataclass
 class NodeDesc(object):  # type: ignore
-    ident: str
+    state: NodeStateFn
     get: AstAttrGetter
     set: AstAttrSetter
-    state: Callable[[], NodeState]
     getexpr: ExprGetter = lambda: None
 
     @property
     def full(self) -> ast.AST:
         "Returns the native AST node for this NodeDesc object."
         return self.state().full  # type: ignore
+
+    @property
+    def ident(self) -> str:
+        return self.state().ident  # type: ignore
+
 
     @property
     def children(self) -> List[NodeDesc]:
