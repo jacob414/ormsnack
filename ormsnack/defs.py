@@ -1,12 +1,9 @@
 import ast
-from typing import Any, Collection, List, NamedTuple, Union
+from typing import Any, Collection, List, Union
+from dataclasses import dataclass
 
-
-class NodeDesc(object):
-    ...
-
-
-class NodeState(NamedTuple):
+@dataclass
+class NodeState(object):
     """Holds information about at native AST node. Provides access to a
     few standardised attributes:
 
@@ -35,6 +32,6 @@ class NodeState(NamedTuple):
 
 
 Native = Union[ast.AST, List[ast.AST]]
-Value = Union[Union[NodeDesc, Collection[NodeDesc], Any]]
-NodeDescList = List[NodeDesc]
-Described = Union[NodeDesc, List[NodeDesc]]
+Value = Union[Union['NodeDesc', Collection['NodeDesc'], Any]]
+NodeDescList = List['NodeDesc']
+Described = Union['NodeDesc', List['NodeDesc']]

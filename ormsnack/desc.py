@@ -4,28 +4,34 @@ import ast
 import types
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import Any, Callable, List, Iterable, Optional, Union, cast
+from typing import (Any, Callable, Generic, Iterable, List, Optional, TypeVar,
+                    Union, cast)
 
 import funcy as fy  # type: ignore
-from .defs import Described, Native, NodeDesc, NodeState, Value
-from kingston import lang, match  # type: ignore
+from .defs import Described, Native, NodeState, Value
+from kingston import lang, match
 
 # Note: the actual value is injected from the mappings module after it
 # has been defined to avoid a circular dependency.
-desc: Callable[[ast.AST], NodeDesc] = ...  # type: ignore
+desc: Callable[[ast.AST], 'NodeDesc'] = ...  # type: ignore
 
 AstAttrGetter = Callable[[], Any]
 AstAttrSetter = Callable[[Any], None]
 ExprGetter = Optional[Callable[[], Optional[ast.AST]]]
-PrimOrDesc = Union[NodeDesc, Any]
-MaybeDesc = Callable[[ast.AST], NodeDesc]
+PrimOrDesc = Union['NodeDesc', Any]
+MaybeDesc = Callable[[ast.AST], 'NodeDesc']
 NodeStateFn = Callable[[], NodeState]
 
-@dataclass
+
+@dataclass(order=True)
 class NodeDesc(object):  # type: ignore
     state: NodeStateFn
-    set: AstAttrSetter
-    getexpr: ExprGetter = lambda: None
+    attrname: str
+
+    # XXX, must revisit, this one is difficult
+    def set(self, value) -> None:
+        full = self.state().full  # type: ignore
+        setattr(full, self.attrname, value)
 
     @property
     def full(self) -> ast.AST:
@@ -36,9 +42,8 @@ class NodeDesc(object):  # type: ignore
     def ident(self) -> str:
         return self.state().ident  # type: ignore
 
-
     @property
-    def children(self) -> List[NodeDesc]:
+    def children(self) -> List['NodeDesc']:
         "NodeDesc objects for all children descending from AST node."
         value_or_desc = self.value
         if fy.is_seqcoll(value_or_desc):
@@ -93,35 +98,15 @@ class NodeDesc(object):  # type: ignore
             hash(child) for child in self.children)
 
 
-def astattrsetter(node: ast.AST, attrname: str) -> AstAttrSetter:
-    """Returns a function that will set an attribute in a native AST
-    node. Specify name in the wrapping function.
-
-    """
-    def setter(value: Any) -> Any:
-        setattr(node, attrname, value)
-
-    return setter
-
-
-def astattrgetter(node: ast.AST,
-                  attrname: str) -> Union[AstAttrGetter, ExprGetter]:
-    "Does astattrgetter"
-
-    def get_ast_attr() -> Any:
-        "Does get_ast_attr"
-        return getattr(node, attrname)
-
-    return get_ast_attr
-
-
 def descend(*nodes: ast.AST) -> Iterable[NodeDesc]:
     "Descends one level into a native AST branch"
+    from .mappings import desc
     return [desc(node) for node in nodes]
 
 
 def descender(nodes: Iterable[ast.AST]) -> Callable[[], Iterable[NodeDesc]]:
     # "Returns a generalised descend function"
+    from .mappings import desc
     return lambda: [desc(node) for node in nodes]
 
 

@@ -4,103 +4,106 @@ import ast
 from dataclasses import dataclass
 from typing import Any, Callable, Collection, Iterable, Optional, Union, cast
 
-from . import desc as desc_module
 from .desc import (AstAttrGetter, AstAttrSetter, ExprGetter, NodeDesc,
-                   PrimOrDesc, astattrgetter, astattrsetter, descender,
-                   nodedisp)
+                   NodeState, PrimOrDesc, descender, nodedisp)
 from kingston import lang, match
-from ormsnack import desc
 
-N = NodeDesc
-snap = desc_module.NodeState
+StateFn = Callable[[ast.AST], NodeState]
 
-desc: nodedisp = nodedisp({  # hm? starting out by just descending into it..
+# XXX note type: ignore comments below. They relate to this:
+#  https://github.com/python/mypy/issues/2852 ,
+#  https://github.com/python/mypy/issues/7250 ,
+#  https://gitter.im/python/mypy?at=5a5479ffba39a53f1af2f4c0,
+#  https://github.com/samuelcolvin/pydantic/issues/781,
+#  https://github.com/python/mypy/issues/4290
+#
+# As far as I've been able to read, this isn't what happens and have
+# been fixed, but in my setup I have never been able to get it to work
+# properly. If anyone can run the below code under mypy without the
+# type ignores, I'd be very happy to try their solution.
+desc: nodedisp = nodedisp({
     # XXX irregularity:
     ast.BinOp:
     lambda bo: [desc(bo.left), desc(bo.op),
                 desc(bo.right)],  # XXX idea: define special type?
+    # XXX irregularity:
     ast.Expr:
     lambda expr: desc(expr.value),
     ast.If:
-    lambda iff: N(state=lambda cur=iff: snap(full=cur,
-                                             spec='if',
-                                             ident='if',
-                                             value=[desc(n) for n in cur.body],
-                                             expr=cur.test),
-                  set=astattrsetter(iff, 'body'),
-                  getexpr=astattrgetter(iff, 'test')),
+    lambda iff: NodeDesc(lambda cur=iff: NodeState(full=cur,
+                                                   spec='if',
+                                                   ident='if',
+                                                   value=
+                                                   [desc(n) for n in cur.body],
+                                                   expr=cur.test),
+                         'body'),  # type: ignore
     ast.Call:
-    lambda call: N(state=lambda cur=call: snap(full=cur,
-                                               spec=f'call/{cur.func.id}',
-                                               ident=dn.func.id,
-                                               value=cur.func,
-                                               expr=()),
-                   set=astattrsetter(call, 'func')),
+    lambda call: NodeDesc(lambda cur=call: NodeState(full=cur,
+                                                     spec=
+                                                     f'call/{cur.func.id}',
+                                                     ident=cur.func.id,
+                                                     value=cur.func,
+                                                     expr=()),
+                          'func'),  # type: ignore
     ast.FunctionDef:
-    lambda fdef: N(state=lambda cur=fdef: snap(
+    lambda fdef: NodeDesc(lambda cur=fdef: NodeState(
         full=cur,
         spec='def',
         ident=cur.name,
         value=[desc(child) for child in cur.body],
         expr=cur.args),
-                   set=astattrsetter(fdef, 'body'),
-                   getexpr=astattrgetter(fdef, 'args')),
+                          'body'),  # type: ignore
     ast.arguments:
-    lambda args: N(state=lambda cur=args: snap(
+    lambda args: NodeDesc(lambda cur=args: NodeState(
         full=cur,
         spec='args',
         ident='({})'.format(','.join(arg.arg for arg in args.args)),
         value=cur.args,
         expr=()),
-                   set=astattrsetter(args, 'args')),
+                          'args'),  # type: ignore
     ast.arg:
-    lambda arg: N(
-        state=lambda cur=arg: snap(
-            full=cur, spec='arg', ident=cur.arg, value=cur.arg, expr=()),
-        set=astattrsetter(arg, 'arg'),
-    ),
+    lambda arg: NodeDesc(lambda cur=arg: NodeState(
+        full=cur, spec='arg', ident=cur.arg, value=cur.arg, expr=()),
+                         'arg'),  # type: ignore
     ast.Compare:
-    lambda cmp_: N(state=lambda cur=cmp_: snap(
+    lambda cmp_: NodeDesc(lambda cur=cmp_: NodeState(
         full=cur,
         spec='cmp',
         ident='cmp',
         value=descender([cur.left, *cur.comparators]),
         expr=()),
-                   set=astattrsetter(cmp_, 'comparators')),
+                          'comparators'),  # type: ignore
     ast.Str:
-    lambda s: N(state=lambda cur=s: snap(
+    lambda s: NodeDesc(lambda cur=s: NodeState(
         full=cur, spec=str, ident=s.s, value=s.s, expr=()),
-                set=astattrsetter(s, 's')),
+                       's'),  # type: ignore
     ast.Num:
-    lambda num: N(state=lambda cur=num: snap(
+    lambda num: NodeDesc(lambda cur=num: NodeState(
         full=cur, spec=type(cur.n), ident=str(cur.n), value=cur.n, expr=()),
-                  set=astattrsetter(num, 'n')),
+                         'n'),  # type: ignore
     ast.Add:
-    lambda a: N(state=lambda cur=a: snap(
+    lambda a: NodeDesc(lambda cur=a: NodeState(
         full=cur, spec='op/+', ident='+', value='+', expr=()),
-                set=astattrsetter(a, 'op')),
+                       'op'),  # type: ignore
     ast.Return:
-    lambda ret: N(state=lambda cur=ret: snap(full=cur,
-                                             spec='return',
-                                             ident='return',
-                                             value=desc(cur.value),
-                                             expr=cur.value),
-                  getexpr=astattrgetter(ret, 'value'),
-                  set=astattrsetter(ret, 'value')),
+    lambda ret: NodeDesc(lambda cur=ret: NodeState(full=cur,
+                                                   spec='return',
+                                                   ident='return',
+                                                   value=desc(cur.value),
+                                                   expr=cur.value),
+                         'value'),  # type: ignore
     ast.Constant:
-    lambda con: N(state=lambda cur=con: snap(full=cur,
-                                             spec=type(cur.value),
-                                             ident=str(cur.value),
-                                             value=cur.value,
-                                             expr=()),
-                  set=astattrsetter(con, 'value')),
+    lambda con: NodeDesc(lambda cur=con: NodeState(full=cur,
+                                                   spec=type(cur.value),
+                                                   ident=str(cur.value),
+                                                   value=cur.value,
+                                                   expr=()),
+                         'value'),  # type: ignore
     ast.Name:
-    lambda name: N(state=lambda cur=name: snap(
+    lambda name: NodeDesc(lambda cur=name: NodeState(
         full=cur, spec=cur.id, ident=cur.id, value=cur.id, expr=()),
-                   set=astattrsetter(name, 'id'))
+                          'id'),  # type: ignore
 })
-
-desc_module.desc = desc
 
 p2a: match.Match = match.Match({
     str: lambda v: ast.Name(id=v),
