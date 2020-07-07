@@ -24,7 +24,6 @@ NodeStateFn = Callable[[], NodeState]
 @dataclass
 class NodeDesc(object):  # type: ignore
     state: NodeStateFn
-    get: AstAttrGetter
     set: AstAttrSetter
     getexpr: ExprGetter = lambda: None
 
@@ -85,11 +84,11 @@ class NodeDesc(object):  # type: ignore
         return self.children[idx]
 
     def __hash__(self):
-        value = self.get()
+        value = self.state().value
         try:
             valuehash = hash(value)
         except:
-            valuehash = sum(hash(node) for node in self.get())
+            valuehash = sum(hash(node) for node in value)
         return hash(self.full) + hash(self.spec) + valuehash + sum(
             hash(child) for child in self.children)
 
