@@ -4,7 +4,6 @@ from typing import Any, List, Iterable, Callable, Union, Optional
 import functools
 import funcy  # type: ignore
 from kingston import lang  # type: ignore
-import _ast
 import ast
 import operator as ops
 from . import mappings
