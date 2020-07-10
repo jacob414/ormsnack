@@ -12,6 +12,7 @@ install = (
     "patterns>=0.3",
     "jsonpickle>=1.2",
     "astunparse>=1.6.3",
+    "kingston>=0.6.7",
 )  # yapf: disable
 
 develop = (

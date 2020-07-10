@@ -315,17 +315,18 @@ class Literal(Node, Leaf):
 
 # Maps native AST nodes to their simplified equivalent
 simplifiers = {
-    _ast.Return: Statement,
-    _ast.BinOp: Expr,
-    _ast.Name: Symbol,
-    _ast.Str: Literal,
-    _ast.Num: Literal,
-    _ast.FunctionDef: Block,
-    _ast.Expr: Expr,
-    _ast.arguments: Expr,
-    _ast.arg: Symbol,
-    _ast.Add: Symbol,
-    _ast.If: Block,
+    ast.Return: Statement,
+    ast.BinOp: Expr,
+    ast.Name: Symbol,
+    ast.Str: Literal,
+    ast.Num: Literal,
+    ast.FunctionDef: Block,
+    ast.Expr: Expr,
+    ast.arguments: Expr,
+    ast.arg: Symbol,
+    ast.Add: Symbol,
+    ast.If: Block,
+    ast.Constant: Literal,
 }
 
 NodeOrIter = Union[ast.AST, Iterable, Node]
