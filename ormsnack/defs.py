@@ -1,96 +1,52 @@
 # yapf
+"""
+Defines types used by Ormsnack.
+"""
 import ast
-import ast as a
+from dataclasses import dataclass
 
 import funcy as fy
-from typing import Any
+from typing import Any, Callable, Union, Optional, Collection
 
-STATEMENTS = {
-    a.If,
-    a.For,
-    a.FunctionDef,
-    a.Yield,
-    a.YieldFrom,
-    a.Assert,
-    a.Await,
-    a.Break,
-    a.ClassDef,
-    a.Continue,
-    a.Del,
-    a.ExceptHandler,
-    a.Import,
-    a.ImportFrom,
-    a.Raise,
-    a.Try,
-    a.While,
-    a.With,
-    a.AsyncWith,
-    a.While,
-    a.AsyncFor,
-    a.AsyncFunctionDef,
-}
+from kingston.match import Match
 
-EXPRESSINS = {
-    a.Add,
-    a.And,
-    a.arg,
-    a.arguments,
-    a.BinOp,
-    a.BinOp,
-    a.BitAnd,
-    a.BitOr,
-    a.BitXor,
-    a.BoolOp,
-    a.Call,
-    a.Compare,
-    a.Constant,
-    a.Dict,
-    a.DictComp,
-    a.Div,
-    a.Ellipsis,
-    a.Eq,
-    a.Expr,
-    a.Expression,
-    a.ExtSlice,
-    a.FloorDiv,
-    a.FormattedValue,
-    a.GeneratorExp,
-    a.Gt,
-    a.GtE,
-    a.IfExp,
-    a.In,
-    a.Index,
-    a.Invert,
-    a.Is,
-    a.IsNot,
-    a.JoinedStr,
-    a.Lambda,
-    a.List,
-    a.ListComp,
-    a.Load,
-    a.LShift,
-    a.Lt,
-    a.LtE,
-    a.MatMult,
-    a.Mult,
-    a.Name,
-    a.NameConstant,
-    a.Not,
-    a.NotEq,
-    a.NotIn,
-    a.Num,
-    a.Or,
-    a.Pow,
-    a.RShift,
-    a.Set,
-    a.SetComp,
-    a.Starred,
-    a.Str,
-    a.Sub,
-    a.Subscript,
-    a.Tuple,
-    a.UAdd,
-    a.UnaryOp,
-    a.USub,
-    a.YieldFrom
-    }
+from .categories import STATEMENTS
+
+AstAttrGetter = Callable[[], Any]
+AstAttrSetter = Callable[[Any], None]
+ExprGetter = Optional[Callable[[], Optional[ast.AST]]]
+PrimOrDesc = Union['NodeDesc', Any]
+Native = Union[ast.AST, Collection[ast.AST]]
+Described = Union['NodeDesc', Collection['NodeDesc']]
+MaybeDesc = Callable[[ast.AST], 'NodeDesc']
+Value = Union[Union['NodeDesc', Collection['NodeDesc'], Any]]
+
+def astattrsetter(node: ast.AST, attrname: str) -> AstAttrSetter:
+    """Returns a function that will set an attribute in a native AST
+    node. Specify name in the wrapping function.
+
+    """
+    def setter(value: Any) -> Any:
+        setattr(node, attrname, value)
+
+    return setter
+
+
+def astattrgetter(node: ast.AST,
+                  attrname: str) -> Union[AstAttrGetter, ExprGetter]:
+    "Does astattrgetter"
+
+    def get_ast_attr() -> Any:
+        "Does get_ast_attr"
+        return getattr(node, attrname)
+
+    return get_ast_attr
+
+
+class NodeDisp(Match):
+    def __call__(self, native: Native) -> Described:
+        describe = super().__call__
+        if fy.is_seqcoll(native):
+            return native
+        else:
+            return describe(native)

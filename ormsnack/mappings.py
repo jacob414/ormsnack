@@ -2,23 +2,24 @@
 
 from _ast import *
 import ast
+from ast import fix_missing_locations as fix
+
 from kingston import lang
 from kingston import match
+from kingston.decl import unbox
 
 from typing import Any, Iterable, Callable, Optional, Union, Collection, cast
 from dataclasses import dataclass
-import funcy
+import funcy as fy
 
-from . import desc as desc_module
+from .state import NodeState, NodeDesc
 
-from .desc import (NodeDesc, nodedisp, AstAttrGetter, AstAttrSetter,
-                   ExprGetter, PrimOrDesc, astattrgetter, astattrsetter,
-                   descender)
+N, snap = NodeDesc, NodeState
 
-N = NodeDesc
-snap = desc_module.NodeState
+from .defs import (AstAttrGetter, AstAttrSetter, ExprGetter, PrimOrDesc,
+                   astattrgetter, astattrsetter, NodeDisp)
 
-desc: nodedisp = nodedisp({  # hm? starting out by just descending into it..
+desc: NodeDisp = NodeDisp({  # hm? starting out by just descending into it..
     # XXX irregularity:
     ast.BinOp:
     lambda bo: [desc(bo.left), desc(bo.op),
@@ -128,8 +129,36 @@ desc: nodedisp = nodedisp({  # hm? starting out by just descending into it..
                    set=astattrsetter(name, 'id'))
 })
 
-desc_module.desc = desc
 
-p2a: match.Match = match.Match({
+class NodeFoundry(match.Match):
+    """Construct new AST nodes based on native Python values.
+
+    """
+    def __call__(self, *params: Any,
+                 **kwargs: Any) -> Union[Iterable[Any], Iterable]:
+        if len(params) == 0 and kwargs:
+            params = tuple(kwargs.items())
+        return super(NodeFoundry, self).__call__(*params)
+
+
+make: NodeFoundry = NodeFoundry({
     str: lambda v: ast.Name(id=v),
+    int: lambda num: ast.Num(n=num),
 })
+
+
+@make.case
+def assign(name: str, value: Any) -> ast.Assign:
+    if not isinstance(value, ast.AST):
+        value = make(value)
+    node = ast.Assign(targets=[ast.Name(id=name, ctx=ast.Store())],
+                      value=value)
+    return fix(node)
+
+
+@make.case
+def from_mapping(mapping: dict) -> ast.Assign:
+    return unbox([make(name, value) for name, value in mapping.items()])
+
+
+make_operator = match.VMatch()

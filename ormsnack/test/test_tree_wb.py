@@ -61,12 +61,6 @@ def test_ast_eval_run_unchanged_combo(fooast, roundtrip, org) -> None:
 
 
 @pytest.mark.wbox
-def test_gen_assign() -> None:
-    "Should be able to generate an assignment that can compile."
-    compile(ast.Interactive(body=[tree.assign(x=ast.Num(n=10))]), '', 'single')
-
-
-@pytest.mark.wbox
 def test_compile_exec_primitive(fooast: ast.AST) -> None:
     "Should compile"
     retexp = fooast.body[-1].value

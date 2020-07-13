@@ -5,6 +5,7 @@ from typing import Any, Collection
 from ormsnack.tree import getast
 from ormsnack import mappings as M
 from ormsnack import desc
+from ormsnack.state import NodeDesc
 from kingston.testing import fixture
 from kingston.dig import dig
 from funcy import is_seqcoll as many
@@ -23,14 +24,13 @@ pytestmark = pytest.mark.wbox
   (2, '2'),
   (3, 'return')
 )  # yapf: disable
-def test_ident(descs: Collection[desc.NodeDesc], idx: int,
-               expected: str) -> None:
+def test_ident(descs: Collection[NodeDesc], idx: int, expected: str) -> None:
     "Checks that every Node descriptor's `ident` property is correct"
     assert descs[idx].ident == expected
 
 
 @pytest.mark.parametrize("idx", range(0, 3))
-def test_full(descs: Collection[desc.NodeDesc], idx: int) -> None:
+def test_full(descs: Collection[NodeDesc], idx: int) -> None:
     "Node descriptor's `full` must be native AST nodes"
     assert isinstance(descs[idx].full, ast.AST)
 
@@ -41,8 +41,7 @@ def test_full(descs: Collection[desc.NodeDesc], idx: int) -> None:
   (2, 2),
   (3, ['x', '+', 3])
 )  # yapf: disable
-def test_value(descs: Collection[desc.NodeDesc], idx: int,
-               expected: Any) -> None:
+def test_value(descs: Collection[NodeDesc], idx: int, expected: Any) -> None:
     "Node descriptor `.value` properties must equal known value."
     if many(expected):
         # NB: It will be the simplified node's job to expand Branch
@@ -59,9 +58,9 @@ def test_value(descs: Collection[desc.NodeDesc], idx: int,
   (3, 3),
 )  # yapf: disable
 def test_children(
-        descs: Collection[desc.NodeDesc],
-        idx: int,
-        expected_length: int,
+    descs: Collection[NodeDesc],
+    idx: int,
+    expected_length: int,
 ) -> None:
     """The `children` property of leaf node descriptors should be empty,
     branch node descriptors should be collections of child node

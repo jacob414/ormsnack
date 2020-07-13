@@ -8,6 +8,8 @@ import types
 from functools import singledispatch
 import astunparse
 from . import lowlevel as low
+from .mappings import make
+
 
 
 def code(node: ast.AST) -> str:  # pragma: nocov
@@ -42,16 +44,6 @@ def getast(obj: Any, name: str = None) -> ast.AST:
         return full.body
 
 
-def assign(**exprs) -> ast.AST:
-    "Does assignp"
-    for key, value in exprs.items():
-        name = key
-        exp = value
-
-    node = ast.Assign(targets=[ast.Name(id=name, ctx=ast.Store())], value=exp)
-    return ast.fix_missing_locations(node)
-
-
 def compile_ast(tree_: ast.AST,
                 filename: str = None,
                 topsym: str = 'xyz') -> types.CodeType:
@@ -59,7 +51,7 @@ def compile_ast(tree_: ast.AST,
     if filename is None:
         filename = '<ormsnack.tree.eval_ast:?>'
 
-    target = ast.Interactive(body=[assign(**{topsym: tree_})])
+    target = ast.Interactive(body=[make(topsym, tree_)])
     try:
         try:
             return compile(target, filename, 'single')
