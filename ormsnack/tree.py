@@ -6,15 +6,14 @@ from pprint import pformat
 from typing import Any, Mapping, Tuple, Optional, Union
 import types
 from functools import singledispatch
-import astunparse
 from . import lowlevel as low
 from .mappings import make
-
+from astor import code_gen
 
 
 def code(node: ast.AST) -> str:  # pragma: nocov
     "Does pp"
-    code = astunparse.unparse(node)
+    code = code_gen.to_source(node)
     return code
 
 
