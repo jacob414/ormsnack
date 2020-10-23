@@ -31,9 +31,9 @@ def scanner(value: Any, matches: MatchStr) -> MatchNode:
     return seek
 
 
-class ASTQuery(lang.ComposePiping, lang.LogicPiping):
-    def __init__(self, snack=None):
-        super().__init__(kind='pipe', format=bool)
+class ASTQuery(object):
+    def __init__(self, snack):
+        super().__init__()
         self.snack = snack
 
     def __call__(self, *params, **opts):
@@ -90,7 +90,7 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
 
 class Snack(ASTQuery):
     def __init__(self, tr):
-        super().__init__(snack=self)
+        super().__init__(self)
         self.org = tr
         self.simpler = None
         self.res = ()

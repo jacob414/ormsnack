@@ -105,6 +105,7 @@ desc: nodedisp = nodedisp({
                           'id'),  # type: ignore
 })
 
-p2a: match.Match = match.Match({
-    str: lambda v: ast.Name(id=v),
+p2a: match.Matcher[Any, ast.AST] = match.TypeMatcher({
+    str:
+    lambda v: ast.Name(id=v),
 })
