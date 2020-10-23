@@ -21,7 +21,7 @@ StateFn = Callable[[ast.AST], NodeState]
 # been fixed, but in my setup I have never been able to get it to work
 # properly. If anyone can run the below code under mypy without the
 # type ignores, I'd be very happy to try their solution.
-desc: nodedisp = nodedisp({
+desc: match.Matcher[ast.AST, NodeDesc] = nodedisp({
     # XXX irregularity:
     ast.BinOp:
     lambda bo: [desc(bo.left), desc(bo.op),

@@ -1,6 +1,11 @@
 import ast
-from typing import Any, Collection, List, Union
+from typing import Any, Collection, List, Union, TYPE_CHECKING
+
 from dataclasses import dataclass
+
+if TYPE_CHECKING:
+    from .desc import NodeDesc  # NOQA
+
 
 @dataclass
 class NodeState(object):

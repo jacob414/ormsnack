@@ -110,7 +110,7 @@ def descender(nodes: Iterable[ast.AST]) -> Callable[[], Iterable[NodeDesc]]:
     return lambda: [desc(node) for node in nodes]
 
 
-class nodedisp(match.Matcher):
+class nodedisp(match.TypeMatcher):  # type: ignore[name-defined]
     def __call__(self, native: Native) -> Described:
         describe = super().__call__
         if fy.is_seqcoll(native):
