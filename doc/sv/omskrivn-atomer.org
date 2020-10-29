@@ -1,0 +1,9 @@
+* Omskrivningar
+
+** Mutera
+
+Grundform *MÅL-NODTYP* *VÄRDE1* *VÄRDE2* *VÄRDE N*
+
+** Flytta
+
+
