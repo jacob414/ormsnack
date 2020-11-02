@@ -4,8 +4,6 @@ from ormsnack import tree
 import ast
 import types
 
-from astunparse import unparse
-
 
 def foo(x):
     "Docstring"
@@ -18,21 +16,23 @@ def fooast() -> ast.AST:
     return tree.getast(foo)
 
 
-# XXX extra param: fix in micropy later..
 @fixture.params(
-    "thing, x",
-    ('Foo', ''),
-    ({
-        1: 2
-    }, ''),
-    (foo, ''),
+    "thing, expected_kinds",
+    ('', ['Module', 'Expr', 'Constant']),
+    ({}, ['Module', 'Expr', 'Dict']),
+    (foo, [
+        'FunctionDef', 'arguments', 'Expr', 'Return', 'arg', 'Constant',
+        'BinOp', 'Name', 'Add', 'Constant', 'Load'
+    ]),
 )
 @pytest.mark.wbox
-def test_getast_sources(thing, x) -> None:
+def test_getast(thing, expected_kinds) -> None:
     "Python objects tree.getast() should be able to return an AST for."
     # XXX not supported:
     #  - [ ] Lambdas
-    assert isinstance(tree.getast(thing), ast.AST)
+    top = tree.getast(thing)
+    kinds = [x.__class__.__name__ for x in ast.walk(top)]
+    assert kinds == expected_kinds
 
 
 @pytest.mark.wbox
