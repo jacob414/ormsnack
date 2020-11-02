@@ -6,4 +6,28 @@ Grundform *MÅL-NODTYP* *VÄRDE1* *VÄRDE2* *VÄRDE N*
 
 ** Flytta
 
+Grundform *NOD* *NUVARANDE POSITION* *NY POSITION*
 
+** Sätta extra attribut på ast -noder
+
+Bevaras ett extra attribut?
+
+Om JA:
+
+  - =.sss= - mest signifikanta värdet
+  - =.view= - skall kunna hitta i sin omvärld, e.g. beroenden etc
+  - =.module= - modulen noden hör hemma i
+  - =.refs= - namngivna? kopplingar till andra noder, tex:
+#+BEGIN_SRC python
+obj = snack(foo)
+print(obj.refs['dest'])
+<_ast.If ....>
+#+END_SRC
+
+eller
+
+#+BEGIN_SRC python
+obj = snack(foo)
+print(obj.refs("def#bar[contain='jox']")
+<_ast.If ....>
+#+END_SRC
