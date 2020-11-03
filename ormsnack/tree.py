@@ -7,14 +7,13 @@ from functools import singledispatch
 from pprint import pformat
 from typing import Any, Mapping, Optional, Tuple, Union
 
-import astunparse
-
 from . import lowlevel as low
+import astor
 
 
 def code(node: ast.AST) -> str:  # pragma: nocov
-    "Does pp"
-    code = astunparse.unparse(node)
+    "Return Python code for an AST node (exact code generator lib may vary)"
+    code = astor.to_source(node)
     return code
 
 

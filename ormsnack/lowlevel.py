@@ -9,8 +9,6 @@ from funcy import flow
 
 import types
 
-import astunparse
-
 PY38 = sys.version_info[:2] >= (3, 8)
 
 def select(typ, top) -> Generator[ast.AST, None, None]:

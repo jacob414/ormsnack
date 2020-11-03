@@ -11,8 +11,8 @@ install = (
     "pysistence>=0.4.1",
     "patterns>=0.3",
     "jsonpickle>=1.2",
-    "astunparse>=1.6.3",
     "kingston>=0.6.7",
+    "astor>=0.8.1",
 )  # yapf: disable
 
 develop = (
