@@ -4,6 +4,8 @@ from ormsnack import tree
 import ast
 import types
 
+from .support import pp_ast
+
 
 def foo(x):
     "Docstring"
@@ -24,6 +26,8 @@ def fooast() -> ast.AST:
         'FunctionDef', 'arguments', 'Expr', 'Return', 'arg', 'Constant',
         'BinOp', 'Name', 'Add', 'Constant', 'Load'
     ]),
+    (lambda x: x, ['Module', 'Lambda', 'arguments', 'Name', 'arg', 'Load']),
+    ((lambda x: 1, 2), ['Module', 'Lambda', 'arguments', 'Name', 'arg', 'Load']),
 )
 @pytest.mark.wbox
 def test_getast(thing, expected_kinds) -> None:

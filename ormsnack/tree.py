@@ -28,14 +28,30 @@ def getast(obj: Any, name: str = None) -> ast.AST:
     if name is None:
         name = getattr(obj, '__name__', '?')
     try:
-        source = inspect.getsource(obj)
+        src = inspect.getsource(obj)
     except TypeError:
         # Try to handle an object that inspect.getsource() couldn't handle.
         # XXX first sketch, ind of weak, let's see how long it holds..
-        source = pformat(obj)
-        return ast.Module(body=ast.parse(source).body)
+        src = pformat(obj)
+        return ast.Module(body=ast.parse(src).body)
 
-    full = ast.parse(source)
+    if 'lambda' in src:
+        wlam = '(' + src[src.index('lambda'):]
+        full = None
+        while full is None:
+            # Work backwards from the 'lambda' keyword, what can be
+            # parsed with ast.parse() first is the AST of the lambda.
+            try:
+                full = ast.parse(wlam)
+            except SyntaxError:
+                wlam = wlam[:-1]
+
+            lnode = next(node for node in ast.walk(full)
+                         if node.__class__ == ast.Lambda)
+            return ast.Module(body=[lnode], types_ignore=[])
+    else:
+        full = ast.parse(src)
+
     cands = [node for node in full.body if getattr(node, 'name', 'X') == name]
 
     if len(cands) == 1:
