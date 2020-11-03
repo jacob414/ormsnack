@@ -4,8 +4,8 @@ import ast
 import sys
 from typing import Any, Mapping, Tuple, Optional, Union, Generator
 
-import funcy as fy
-from funcy import flow
+import funcy as fy   # type: ignore[import]
+from funcy import flow   # type: ignore[import]
 
 import types
 

@@ -8,7 +8,7 @@ from pprint import pformat
 from typing import Any, Mapping, Optional, Tuple, Union
 
 from . import lowlevel as low
-import astor
+import astor  # type: ignore[import]
 
 
 def code(node: ast.AST) -> str:  # pragma: nocov
