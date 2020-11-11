@@ -30,6 +30,7 @@ def fooast() -> ast.AST:
     ((lambda x: 1, 2), ['Module', 'Lambda', 'arguments', 'Name', 'arg', 'Load']),
 )
 @pytest.mark.wbox
+@pytest.mark.skip
 def test_getast(thing, expected_kinds) -> None:
     "Python objects tree.getast() should be able to return an AST for."
     # XXX not supported:

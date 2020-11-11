@@ -11,6 +11,8 @@ from kingston.testing import fixture
 
 from .examples import *
 
+pytestmark = pytest.mark.skip
+
 
 def test_snacka(Fob) -> None:
     "Should be able to roundtrip the example code."
