@@ -114,13 +114,6 @@ class Snack(ASTQuery):
         else:
             return self.rep
 
-    def __getattribute__(self, name: str) -> Any:
-        try:
-            return super(ASTQuery, self).__getattribute__(name)
-        except AttributeError:
-            root = self.rep
-            raise NotImplemented(f"Pending implementation...")
-
     def __getitem__(self, idx: Any) -> Iterable[Node]:
         "Indexed access"
         if not self.res and self.ops:
