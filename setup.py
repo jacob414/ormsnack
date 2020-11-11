@@ -20,6 +20,7 @@ develop = (
     "hypothesis>=4.24.3",
     "altered_states>=1.0.9",
     "pytest-cov>=2.7.1",
+    "ast2json>=0.2.1"
 )  # yapf: disable
 
 setup(
