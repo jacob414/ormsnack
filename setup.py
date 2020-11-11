@@ -11,7 +11,7 @@ install = (
     "pysistence>=0.4.1",
     "patterns>=0.3",
     "jsonpickle>=1.2",
-    "kingston>=0.6.7",
+    "kingston>=0.7.2",
     "astor>=0.8.1",
 )  # yapf: disable
 
