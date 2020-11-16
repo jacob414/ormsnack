@@ -18,28 +18,6 @@ def fooast() -> ast.AST:
     return tree.getast(foo)
 
 
-@fixture.params(
-    "thing, expected_kinds",
-    ('', ['Module', 'Expr', 'Constant']),
-    ({}, ['Module', 'Expr', 'Dict']),
-    (foo, [
-        'FunctionDef', 'arguments', 'Expr', 'Return', 'arg', 'Constant',
-        'BinOp', 'Name', 'Add', 'Constant', 'Load'
-    ]),
-    (lambda x: x, ['Module', 'Lambda', 'arguments', 'Name', 'arg', 'Load']),
-    ((lambda x: 1, 2), ['Module', 'Lambda', 'arguments', 'Name', 'arg', 'Load']),
-)
-@pytest.mark.wbox
-@pytest.mark.skip
-def test_getast(thing, expected_kinds) -> None:
-    "Python objects tree.getast() should be able to return an AST for."
-    # XXX not supported:
-    #  - [ ] Lambdas
-    top = tree.getast(thing)
-    kinds = [x.__class__.__name__ for x in ast.walk(top)]
-    assert kinds == expected_kinds
-
-
 @pytest.mark.wbox
 def test_lowlevel_roundtrip(fooast: ast.AST) -> None:
     "Should simplest_roundtrip"

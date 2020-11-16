@@ -5,16 +5,54 @@ import inspect
 import types
 from functools import singledispatch
 from pprint import pformat
-from typing import Any, Mapping, Optional, Tuple, Union
+import funcy as fy  # type: ignore[import]
+from typing import Any, Mapping, Optional, Tuple, Union, List, Collection, cast
+from types import LambdaType
 
 from . import lowlevel as low
 import astor  # type: ignore[import]
+
+import pyclbr as ob
 
 
 def code(node: ast.AST) -> str:  # pragma: nocov
     "Return Python code for an AST node (exact code generator lib may vary)"
     code = astor.to_source(node)
     return code
+
+
+def get_short_lambda_source(lambda_: LambdaType) -> str:
+    """
+    Return source code of a live lambda object.
+
+    :param lambda_: Lambda to get source from.
+
+    :return: Python source of  ``lambda_``.
+    :rtype: str
+    """
+    src, _ = inspect.getsourcelines(lambda_)
+    if len(src) > 1:
+        raise ValueError(f"Ambigous source lines from lambda {lambda_!r}")
+    return src[0].strip()
+
+
+def extract_lambda(line: str, lambda_: LambdaType) -> ast.Lambda:
+    nodes = None
+    while nodes is None:
+        # Work backwards from the 'lambda' keyword, what can be
+        # parsed with ast.parse() first is the AST of the lambda.
+        try:
+            attempt = f"({line})"
+            codeob = compile(attempt, '?', 'eval')
+            nodes = ast.parse(attempt)
+            if len(codeob.co_code) == len(lambda_.__code__.co_code):
+                break
+        except SyntaxError:
+            pass
+
+        line = line[:-1]
+
+    return cast(ast.Lambda, next(low.select(cast(ast.AST, ast.Lambda), nodes)))
 
 
 def getast(obj: Any, name: str = None) -> ast.AST:
@@ -26,37 +64,40 @@ def getast(obj: Any, name: str = None) -> ast.AST:
     """
     if name is None:
         name = getattr(obj, '__name__', '?')
+
+    if 'lambda' in repr(obj):
+        # http://xion.io/post/code/python-get-lambda-code.html
+        lambda_ = cast(LambdaType, obj)
+        line = get_short_lambda_source(lambda_)
+        return extract_lambda(line[line.index('lambda'):], lambda_)
+
     try:
         src = inspect.getsource(obj)
     except TypeError:
         # Try to handle an object that inspect.getsource() couldn't handle.
         # XXX first sketch, ind of weak, let's see how long it holds..
         src = pformat(obj)
-        return ast.Module(body=ast.parse(src).body)
+        return module(ast.parse(src).body)
 
-    if 'lambda' in src:
-        wlam = '(' + src[src.index('lambda'):]
-        full = None
-        while full is None:
-            # Work backwards from the 'lambda' keyword, what can be
-            # parsed with ast.parse() first is the AST of the lambda.
-            try:
-                full = ast.parse(wlam)
-            except SyntaxError:
-                wlam = wlam[:-1]
-
-            lnode = next(node for node in ast.walk(full)
-                         if node.__class__ == ast.Lambda)
-            return ast.Module(body=[lnode], types_ignore=[])
-    else:
-        full = ast.parse(src)
+    full = ast.parse(src)
 
     cands = [node for node in full.body if getattr(node, 'name', 'X') == name]
 
     if len(cands) == 1:
-        return cands[0]
+        return ast.fix_missing_locations(cands[0])
     else:
         return full.body
+
+
+def module(nodes: Collection,
+           type_ignores: List = [],
+           lineno: int = 0,
+           col_offset: int = 0) -> ast.Module:
+    "Does module"
+    mod = ast.Module(body=list(nodes), type_ignores=type_ignores)
+    mod.lineno = lineno
+    mod.col_offset = col_offset
+    return mod
 
 
 def assign(**exprs) -> ast.AST:
@@ -76,13 +117,14 @@ def compile_ast(tree_: ast.AST,
     if filename is None:
         filename = '<ormsnack.tree.eval_ast:?>'
 
-    target = ast.Interactive(body=[assign(**{topsym: tree_})])
+    assign_ = assign(**{topsym: tree_})
+
+    target = ast.Interactive(body=[assign_])
     try:
         try:
             return compile(target, filename, 'single')
         except TypeError:
             target = low.module(tree_)
-
             return compile(target, filename, 'exec')
     except SyntaxError as exc:
         code_ = code(target)
@@ -128,3 +170,7 @@ def run_ast(topnode: ast.AST,
     code = compile_ast(topnode)
     full = run_all(code, **env)
     return full[name] if name else full
+
+
+def count_nodes(origin:ast.AST):
+    return len(tuple(ast.walk(top)))
