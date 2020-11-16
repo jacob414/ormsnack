@@ -6,7 +6,10 @@ from typing import Any, Callable, Collection, Iterable, Optional, Union, cast
 
 from .desc import (AstAttrGetter, AstAttrSetter, ExprGetter, NodeDesc,
                    NodeState, PrimOrDesc, descender, nodedisp)
-from kingston import lang, match
+from .lowlevel import count_nodes
+
+from kingston import lang
+from kingston.match import Matcher, TypeMatcher, Miss  # type: ignore[attr-defined]
 
 StateFn = Callable[[ast.AST], NodeState]
 
@@ -21,7 +24,7 @@ StateFn = Callable[[ast.AST], NodeState]
 # been fixed, but in my setup I have never been able to get it to work
 # properly. If anyone can run the below code under mypy without the
 # type ignores, I'd be very happy to try their solution.
-desc: nodedisp = nodedisp({
+desc: Matcher[ast.AST, NodeDesc] = nodedisp({
     # XXX irregularity:
     ast.BinOp:
     lambda bo: [desc(bo.left), desc(bo.op),
@@ -105,6 +108,34 @@ desc: nodedisp = nodedisp({
                           'id'),  # type: ignore
 })
 
-p2a: match.Match = match.Match({
-    str: lambda v: ast.Name(id=v),
-})
+
+def examine(top: ast.AST) -> int:
+    """Recur down ``top`` to find if there are nodes that wouldn't be
+    findable after exec."""
+    if isinstance(top, ast.AST):
+        nodec = count_nodes(top)
+        print(f'XXX How to count children in {top}???')
+        import pdb
+        pdb.set_trace()
+        return 0
+    else:
+        raise TypeError(f"Not possible to count names in {top}")
+
+
+never = lambda: 0
+always = lambda: 1
+
+countnames: Matcher[ast.AST, int] = TypeMatcher({
+    ast.Lambda: never,
+    ast.Assign: always,
+    ast.FunctionDef: always,
+    ast.BinOp: never,
+    ast.Constant: never,
+    ast.Module: never,
+    Miss: examine
+})  # yapf: disable
+
+
+@countnames.case
+def interactive_names(inter: ast.Interactive) -> int:
+    return sum([countnames(sub) for sub in inter.body])
