@@ -9,16 +9,15 @@ import funcy as fy  # type: ignore[import]
 from typing import Any, Mapping, Optional, Tuple, Union, List, Collection, cast
 from types import LambdaType
 
-import astunparse
-
 from . import lowlevel as low
+import astor  # type: ignore[import]
 
 import pyclbr as ob
 
 
 def code(node: ast.AST) -> str:  # pragma: nocov
-    "Does pp"
-    code = astunparse.unparse(node)
+    "Return Python code for an AST node (exact code generator lib may vary)"
+    code = astor.to_source(node)
     return code
 
 
@@ -73,7 +72,7 @@ def getast(obj: Any, name: str = None) -> ast.AST:
         return extract_lambda(line[line.index('lambda'):], lambda_)
 
     try:
-        source = inspect.getsource(obj)
+        src = inspect.getsource(obj)
     except TypeError:
         # Try to handle an object that inspect.getsource() couldn't handle.
         # XXX first sketch, ind of weak, let's see how long it holds..
@@ -82,7 +81,6 @@ def getast(obj: Any, name: str = None) -> ast.AST:
 
     full = ast.parse(src)
 
-    full = ast.parse(source)
     cands = [node for node in full.body if getattr(node, 'name', 'X') == name]
 
     if len(cands) == 1:

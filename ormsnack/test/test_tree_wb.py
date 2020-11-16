@@ -4,7 +4,7 @@ from ormsnack import tree
 import ast
 import types
 
-from astunparse import unparse
+from .support import pp_ast
 
 
 def foo(x):
@@ -16,23 +16,6 @@ def foo(x):
 def fooast() -> ast.AST:
     "Does fooast"
     return tree.getast(foo)
-
-
-# XXX extra param: fix in micropy later..
-@fixture.params(
-    "thing, x",
-    ('Foo', ''),
-    ({
-        1: 2
-    }, ''),
-    (foo, ''),
-)
-@pytest.mark.wbox
-def test_getast_sources(thing, x) -> None:
-    "Python objects tree.getast() should be able to return an AST for."
-    # XXX not supported:
-    #  - [ ] Lambdas
-    assert isinstance(tree.getast(thing), ast.AST)
 
 
 @pytest.mark.wbox

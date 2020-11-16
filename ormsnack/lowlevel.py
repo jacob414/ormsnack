@@ -9,8 +9,6 @@ from funcy import flow  # type: ignore[import]
 
 import types
 
-import astunparse
-
 PY38 = sys.version_info[:2] >= (3, 8)
 
 

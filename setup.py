@@ -11,8 +11,8 @@ install = (
     "pysistence>=0.4.1",
     "patterns>=0.3",
     "jsonpickle>=1.2",
-    "astunparse>=1.6.3",
-    "kingston>=0.6.7",
+    "kingston>=0.7.2",
+    "astor>=0.8.1",
 )  # yapf: disable
 
 develop = (
@@ -20,6 +20,7 @@ develop = (
     "hypothesis>=4.24.3",
     "altered_states>=1.0.9",
     "pytest-cov>=2.7.1",
+    "ast2json>=0.2.1"
 )  # yapf: disable
 
 setup(

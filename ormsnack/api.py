@@ -31,19 +31,17 @@ def scanner(value: Any, matches: MatchStr) -> MatchNode:
     return seek
 
 
-class ASTQuery(lang.ComposePiping, lang.LogicPiping):
-    def __init__(self, snack=None):
-        super().__init__(kind='pipe', format=bool)
+class ASTQuery(object):
+    def __init__(self, snack):
+        super().__init__()
         self.snack = snack
 
     def __call__(self, *params, **opts):
-        return super(lang.LogicPiping, self).__call__(*params, **opts)
+        return super(self).__call__(*params, **opts)
 
     def __eq__(self, exact) -> 'ASTQuery':
         "Bitwise OR as simple function composition"
         top = self.rep
-        self.logically((lambda node: node.ident == exact), True)
-        self.run_q(top)
         return self
 
     def __lshift__(self, value: Any) -> 'ASTQuery':
@@ -55,7 +53,6 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
             # print(f'{value} == {textual} {value == textual}?')
             return str(value) == textual
 
-        self.logically(scanner(value, exact), True)
         return self
 
     def __matmul__(self, pattern: str) -> 'ASTQuery':
@@ -66,20 +63,11 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
             "Does rx_node_fn"
             return bool(rx.match(node.ident))
 
-        self.logically(rx_node_fn, True)
         return self
 
     @property
     def linear(self):
         return self.rep.linear
-
-    def run_q(self, top: Node) -> List:
-        "Perform a query on AST tree."
-        # self.zero()
-        pfunc = super(lang.LogicPiping, self).__call__
-        all_ = tuple(funcy.flatten((sub.linear for sub in top.linear)))
-        res = [node for node in all_ if pfunc(node)]
-        return res
 
     def zero(self):
         ops_ = self.ops
@@ -90,7 +78,7 @@ class ASTQuery(lang.ComposePiping, lang.LogicPiping):
 
 class Snack(ASTQuery):
     def __init__(self, tr):
-        super().__init__(snack=self)
+        super().__init__(self)
         self.org = tr
         self.simpler = None
         self.res = ()
@@ -106,14 +94,12 @@ class Snack(ASTQuery):
 
     def __call__(self, *params, **opts):
         root = self.rep
-        x = self.run_q(root)
         return funcy.compact(self.truthy)
 
     def _run_cur(self) -> ASTQuery:
         "Runs current Query."
         root = self.rep
         if len(self.ops) > 0:
-            self.run_q(root)  # nb: next, to initiate generator
             return funcy.compact(self.truthy)
         else:
             raise ValueError("INTERNAL: Snack._run_cur() called without query "
@@ -127,16 +113,6 @@ class Snack(ASTQuery):
             return self.res
         else:
             return self.rep
-
-    def __getattribute__(self, name: str) -> Any:
-        try:
-            return super(ASTQuery, self).__getattribute__(name)
-        except AttributeError:
-            root = self.rep
-            rq = self.run_q
-            self << name
-            res = rq(root)
-            return nodes(res)
 
     def __getitem__(self, idx: Any) -> Iterable[Node]:
         "Indexed access"
